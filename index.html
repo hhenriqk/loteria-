@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
+<title>Bolão — Mega-Sena & Lotofácil</title>
+<style>
+  :root{
+    --bg:#0A1410; --panel:#10201A; --card:#13241D; --inp:#0C1712;
+    --line:#1F362C; --text:#E9F1EC; --mut:#7E9488; --mutHi:#A6BCB0;
+    --amber:#F2A93B; --red:#E76A82;
+    --accent:#00A85A; --accentHi:#43E08A; --accentInk:#04130C;     /* trocado por jogo */
+    --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;overscroll-behavior:none;overflow-x:hidden}
+  body{background:radial-gradient(900px 360px at 50% -140px, color-mix(in srgb,var(--accent) 16%, transparent), transparent 70%),var(--bg);
+    color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+  .wrap{max-width:560px;margin:0 auto;padding:20px 16px 48px}
+  .center{min-height:100vh;display:flex;align-items:center;justify-content:center}
+
+  .badge{background:var(--accent);color:var(--accentInk);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.16em;padding:4px 8px;border-radius:6px}
+  h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0}
+  .sub{color:var(--mut);font-size:13px;margin:6px 0 0;line-height:1.4}
+  .row{display:flex;align-items:center}.gap8{gap:8px}.gap12{gap:12px}.between{justify-content:space-between}
+
+  .seg{display:inline-flex;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px;gap:4px}
+  .seg button{appearance:none;border:0;background:transparent;color:var(--mutHi);font:600 14px var(--sans);padding:7px 16px;border-radius:999px;cursor:pointer;transition:.15s}
+  .seg button[aria-selected="true"]{background:var(--accent);color:var(--accentInk)}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:16px}
+  .p16{padding:16px}.p12{padding:12px}.p20{padding:20px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  label.fld{display:block}
+  .fld .lab{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.1em;display:block;margin-bottom:6px}
+  input,select{width:100%;background:var(--inp);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:11px 12px;font-size:16px;font-family:var(--sans)}
+  input.mono{font-family:var(--mono)}
+  input:focus,select:focus{outline:2px solid var(--accent);outline-offset:1px;border-color:var(--accent)}
+  .hint{color:var(--mut);font-size:12px;line-height:1.45}.hint b{color:var(--mutHi)}
+
+  .btn{appearance:none;border:1px solid var(--line);background:transparent;color:var(--mutHi);font:700 15px var(--sans);padding:12px 16px;border-radius:11px;cursor:pointer;transition:.12s}
+  .btn:active{transform:scale(.99)}
+  .btn.primary{background:var(--accent);color:var(--accentInk);border-color:var(--accent)}
+  .btn.primary:disabled{background:var(--card);color:var(--mut);border-color:var(--line);cursor:not-allowed}
+  .btn.full{width:100%}.btn.sm{padding:7px 12px;font-size:13px;border-radius:9px}
+  .link{background:none;border:0;color:var(--accentHi);font:600 14px var(--sans);cursor:pointer}
+  .msg{font-size:13px;margin:10px 0 0;line-height:1.45}.msg.err{color:var(--red)}.msg.ok{color:var(--accentHi)}
+
+  .vtop{display:flex;justify-content:space-between;align-items:center;padding:2px 4px 10px}
+  .vtop .ttl{color:var(--mut);font:600 11px var(--mono);text-transform:uppercase;letter-spacing:.14em}
+  .vcount{font:800 12px var(--mono)}
+  .volante{display:grid;gap:6px}
+  .cell{aspect-ratio:1;border:1px solid var(--line);background:var(--card);color:var(--mutHi);border-radius:8px;font:800 13px var(--mono);cursor:pointer;transition:background .12s,color .12s,border-color .12s;padding:0}
+  .cell:active{background:#1c3a2b}
+  .cell.on{background:var(--accent);color:var(--accentInk);border-color:var(--accent)}
+  .cell:disabled{opacity:.4;cursor:not-allowed}
+  @media(max-width:420px){.volante{gap:4px}.cell{font-size:12px}}
+
+  .resHead{display:flex;justify-content:space-between;align-items:center}
+  .aval{font-size:24px;font-weight:800;margin:2px 0 0}
+  .eyebrow{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.12em;margin:0}
+  .ring{position:relative;width:64px;height:64px;flex:none}.ring svg{transform:rotate(-90deg)}
+  .ring .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .ring .num b{font:800 17px var(--mono);line-height:1}.ring .num span{color:var(--mut);font-size:9px;margin-top:2px}
+
+  .chips{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:14px}
+  .chip{background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .chip.bad{border-color:var(--amber)}
+  .chip .k{font-size:12px;color:var(--mutHi);display:flex;align-items:center;gap:6px;min-width:0}
+  .chip .k .tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chip .mk{font-weight:800;flex:none}.chip .v{font:800 12px var(--mono);flex:none}
+
+  .sugbox{background:#1E160A;border:1px solid rgba(242,169,59,.25);border-radius:10px;padding:12px;margin-top:14px}
+  .sugbox .t{color:var(--amber);font:700 12px var(--sans);text-transform:uppercase;letter-spacing:.08em;margin:0}
+  .sugbox ul{margin:8px 0 0;padding:0;list-style:none}
+  .sugbox li{color:var(--mutHi);font-size:14px;line-height:1.5;margin-bottom:6px;padding-left:16px;position:relative}
+  .sugbox li::before{content:"•";color:var(--amber);position:absolute;left:2px}
+  .okmsg{color:var(--accentHi);font-size:14px;margin:12px 0 0}
+
+  .fechado{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:14px}
+  .fechado .big{font:800 22px var(--mono);color:var(--accentHi)}
+  .fechado .lbl{color:var(--mut);font-size:11px;text-transform:uppercase;letter-spacing:.1em}
+
+  .grp{overflow:hidden;margin-top:14px}
+  .grpHead{background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px;display:flex;justify-content:space-between;align-items:center}
+  .grpHead .d{font-weight:700;font-size:14px}
+  .jrow{padding:10px 14px;display:flex;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid var(--line)}
+  .jrow:first-child{border-top:0}
+  .jrow .nm{font-size:13px;font-weight:700;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .jrow .dz{font:700 14px var(--mono);color:var(--accentHi);letter-spacing:.06em;margin:2px 0 0;word-break:break-word}
+  .jrow .tag{font:700 9px var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:2px 6px;border-radius:5px;border:1px solid var(--line);color:var(--mut)}
+  .jrow .rm{background:none;border:0;color:var(--mut);font-size:12px;cursor:pointer;flex:none}
+  .empty{text-align:center;padding:24px}.empty .big2{color:var(--mutHi);font-size:14px}.empty .small{color:var(--mut);font-size:12px;margin-top:4px}
+
+  .pend{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--line)}
+  .pend:first-child{border-top:0}
+  .pend .nm{font-size:14px;font-weight:700;margin:0}.pend .em{color:var(--mut);font-size:12px;margin:2px 0 0}
+
+  #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);background:var(--card);border:1px solid var(--accent);color:var(--text);padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:60}
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .stack>*+*{margin-top:16px}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+  <div id="root"></div>
+  <div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+"use strict";
+/* =====================================================================
+   ▼▼▼  CONFIG — PREENCHA ANTES DE PUBLICAR  ▼▼▼
+   ===================================================================== */
+const SUPABASE_URL  = "https://tdycxlukafnfantteood.supabase.co";   // já é o seu
+const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InRkeWN4bHVrYWZuZmFudHRlb29kIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODEzNTczODksImV4cCI6MjA5NjkzMzM4OX0.lkaLgnSSB9TCQfFu6Vpi2fgSFQEkuh01sbq3RBOKTxE";              // Settings → API
+
+// Preço por aposta simples (confira o valor atual na Caixa e ajuste):
+const PRECO = { mega:5.00, lotofacil:3.00 };
+/* =====================================================================
+   ▲▲▲  fim do CONFIG  ▲▲▲
+   ===================================================================== */
+
+const cfgOk = ()=>/^https:\/\/.+\.supabase\.co$/.test(SUPABASE_URL) && SUPABASE_ANON.length>20 && SUPABASE_ANON!=="COLE_AQUI_A_CHAVE_ANON_PUBLIC";
+const sb = cfgOk() ? supabase.createClient(SUPABASE_URL, SUPABASE_ANON) : null;
+
+/* ---------------- DADOS DOS JOGOS ---------------- */
+const POP_MEGA={1:116.7,2:108.3,3:154.9,4:126.1,5:171.1,6:121.6,7:124.1,8:112.6,9:126.8,10:153.4,11:122.9,12:137.1,13:130.5,14:101.7,15:117.9,16:113.2,17:142.8,18:136.2,19:108.2,20:105.5,21:126.2,22:109.6,23:130.1,24:124.7,25:144.3,26:94.2,27:110.7,28:92.4,29:103.1,30:82.4,31:95.4,32:114.4,33:160.4,34:121.1,35:95.8,36:114.6,37:114.6,38:91.8,39:95.2,40:77.0,41:100.2,42:112.6,43:105.8,44:93.6,45:100.4,46:94.5,47:90.8,48:101.1,49:89.3,50:91.7,51:95.0,52:81.1,53:93.1,54:85.3,55:92.5,56:109.5,57:97.7,58:100.6,59:97.7,60:77.5};
+const POP_LOTO={1:544.9,2:538.3,3:550.7,4:521.6,5:557.0,6:519.7,7:538.7,8:538.4,9:528.9,10:531.8,11:513.9,12:541.6,13:546.8,14:532.4,15:531.9,16:508.5,17:545.7,18:536.9,19:536.8,20:518.6,21:519.0,22:532.5,23:543.7,24:536.2,25:549.8};
+
+const GAMES={
+  mega:{
+    id:"mega", nome:"Mega-Sena", accent:"#00A85A", accentHi:"#43E08A", ink:"#04130C",
+    total:60, cols:10, base:6, max:20, pop:POP_MEGA, sorteios:[2,4,6],
+    listas:{quentes:[3,6,9,10,14,15,23,27,28,31,32,42,46,49,58],frias:[2,5,11,12,25,34,47,48,51,54,55,56,57,59,60],atrasadas:[2,11,12,22,25,34,35,48,54,60],ultimo:[9,24,26,38,45,58]},
+    analyze:analyzeMega, suggest:suggestMega
+  },
+  lotofacil:{
+    id:"lotofacil", nome:"Lotofácil", accent:"#8A189A", accentHi:"#C95FD6", ink:"#1A0420",
+    total:25, cols:5, base:15, max:20, pop:POP_LOTO, sorteios:[1,2,3,4,5,6], // Lotofácil: seg a sáb
+    listas:{quentes:[5,6,7,10,11,13,19,20],frias:[8,9,14,15,16,17,21,25],atrasadas:[6,14,19,20,25],ultimo:[2,3,4,5,8,9,10,11,12,15,16,17,22,23,24]},
+    analyze:analyzeLoto, suggest:suggestLoto
+  }
+};
+
+/* ---------------- utils ---------------- */
+const $=(s,r=document)=>r.querySelector(s);
+const el=(t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+const p2=n=>String(n).padStart(2,"0");
+const inR=(x,a,b)=>x>=a&&x<=b;
+const sum=a=>a.reduce((x,y)=>x+y,0);
+function popVar(arr){const m=sum(arr)/arr.length;return arr.reduce((a,b)=>a+(b-m)**2,0)/arr.length;}
+function comb(n,k){if(k<0||k>n)return 0;k=Math.min(k,n-k);let r=1;for(let i=0;i<k;i++)r=r*(n-i)/(i+1);return Math.round(r);}
+function brl(v){return "R$ "+v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});}
+function iso(d){return d.toISOString().slice(0,10);}
+function nextDraw(dias){const d=new Date();d.setHours(0,0,0,0);for(let i=0;i<8;i++){if(dias.includes(d.getDay()))return iso(d);d.setDate(d.getDate()+1);}return iso(d);}
+function fmtBR(s){if(!s)return"";const[y,m,dd]=s.split("-");const dd_=["dom","seg","ter","qua","qui","sex","sáb"];return dd+"/"+m+" ("+dd_[new Date(s+"T12:00:00").getDay()]+")";}
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+let toastT;function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove("show"),1700);}
+function copyText(txt){if(navigator.clipboard&&window.isSecureContext){navigator.clipboard.writeText(txt).then(()=>toast("Copiado")).catch(fb);}else fb();function fb(){const ta=el("textarea");ta.value=txt;ta.style.position="fixed";ta.style.opacity="0";document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copiado");}catch(e){toast("Copie manualmente");}document.body.removeChild(ta);}}
+function setAccent(g){const r=document.documentElement.style;r.setProperty("--accent",g.accent);r.setProperty("--accentHi",g.accentHi);r.setProperty("--accentInk",g.ink);}
+const avalColor=a=>a==="MESTRE"?"var(--accentHi)":a==="BOM"?"var(--accent)":a==="FRACO"?"var(--amber)":"var(--red)";
+const scoreColor=s=>s>=85?"var(--accentHi)":s>=70?"var(--accent)":s>=55?"var(--amber)":"var(--red)";
+function ringEl(score){const r=26,c=2*Math.PI*r,off=c*(1-score/100),col=scoreColor(score);const w=el("div","ring");w.innerHTML=`<svg width="64" height="64"><circle cx="32" cy="32" r="${r}" fill="none" stroke="var(--line)" stroke-width="6"/><circle cx="32" cy="32" r="${r}" fill="none" stroke="${col}" stroke-width="6" stroke-dasharray="${c}" stroke-dashoffset="${off}" stroke-linecap="round"/></svg><div class="num"><b style="color:${col}">${score}</b><span>/100</span></div>`;return w;}
+function node(h){const t=el("div");t.innerHTML=h.trim();return t.firstChild;}
+const avalDe=s=>s>=85?"MESTRE":s>=70?"BOM":s>=55?"FRACO":"RUIM";
+
+/* ---------------- VALIDADOR MEGA-SENA (base 6) ---------------- */
+function analyzeMega(nums,L){
+  const g=[...nums].sort((a,b)=>a-b);
+  const soma=sum(g),pares=g.filter(n=>n%2===0).length;
+  const t1=g.filter(n=>n<=20).length,t2=g.filter(n=>n>=21&&n<=40).length,t3=g.filter(n=>n>=41).length;
+  const fa={};g.forEach(n=>{const f=Math.floor((n-1)/10);fa[f]=(fa[f]||0)+1;});const linhas=Math.max(...Object.values(fa));
+  const te={};g.forEach(n=>{const t=n%10;te[t]=(te[t]||0)+1;});const cols=Math.max(...Object.values(te));
+  const repet=g.filter(n=>L.ultimo.includes(n)).length, nAtras=g.filter(n=>L.atrasadas.includes(n)).length;
+  const nQuent=g.filter(n=>L.quentes.includes(n)).length, nFrias=g.filter(n=>L.frias.includes(n)).length;
+  const pop=Math.round(g.reduce((a,n)=>a+(POP_MEGA[n]||0),0)*10)/10;
+  const distMed=Math.round(((g[g.length-1]-g[0])/5)*10)/10;
+  const ieg=Math.round((popVar(g.map(n=>Math.floor(n/10)))+popVar(g.map(n=>n%10)))*10)/10;
+  let s=0;
+  s+=inR(soma,100,265)?15:0;s+=inR(pares,2,4)?15:0;
+  s+=inR(t1,1,3)?4:0;s+=inR(t2,1,3)?4:0;s+=inR(t3,1,3)?4:0;
+  s+=linhas<=3?5:0;s+=cols<=2?5:0;s+=repet<=1?8:0;
+  s+=nAtras>=1?5:0;s+=inR(nQuent,1,3)?5:0;s+=nFrias<=3?5:0;
+  s+=pop<=650?15:(pop<=850?7:0);s+=inR(distMed,5,12)?5:0;s+=ieg>=4?5:0;
+  const checks=[
+    ["Soma",soma,inR(soma,100,265)],["Pares/ímpares",pares+"/"+(g.length-pares),inR(pares,2,4)],
+    ["Números baixos (1–20)",t1,inR(t1,1,3)],["Números do meio (21–40)",t2,inR(t2,1,3)],["Números altos (41–60)",t3,inR(t3,1,3)],
+    ["Concentração",linhas,linhas<=3],["Mesmo final",cols,cols<=2],["Repete sorteio passado",repet,repet<=1],
+    ["Há muito sem sair",nAtras,nAtras>=1],["Em alta",nQuent,inR(nQuent,1,3)],["Saem pouco",nFrias,nFrias<=3],
+    ["Concorrência",pop,pop<=650],["Distância",distMed,inR(distMed,5,12)],["Equilíbrio",ieg,ieg>=4]];
+  return {g,soma,pares,t1,t2,t3,linhas,cols,repet,nAtras,nQuent,nFrias,pop,distMed,score:s,aval:avalDe(s),checks};
+}
+function suggestMega(a,L){
+  const o=[],g=a.g,odds=g.filter(n=>n%2),evens=g.filter(n=>!(n%2));
+  const livre=f=>Object.keys(POP_MEGA).map(Number).filter(n=>!g.includes(n)&&(f?f(n):1)).sort((x,y)=>POP_MEGA[x]-POP_MEGA[y]);
+  const ex=a=>a.length?a[0]:null;
+  if(a.pares<2){const t=ex(livre(n=>!(n%2)));o.push("Quase só números ímpares. Troque um ímpar (ex.: "+odds[odds.length-1]+")"+(t?" por um par como "+t:"")+".");}
+  if(a.pares>4){const t=ex(livre(n=>n%2));o.push("Pares demais. Troque um par (ex.: "+evens[evens.length-1]+")"+(t?" por um ímpar como "+t:"")+".");}
+  if(a.soma<100)o.push("A soma ficou baixa. Troque um número pequeno por um maior.");
+  if(a.soma>265)o.push("A soma ficou alta. Troque um número grande por um menor.");
+  if(a.t1===0){const t=ex(livre(n=>n<=20));o.push("Faltou número baixo (1–20). Inclua um"+(t?", como o "+t:"")+".");}
+  if(a.t3===0){const t=ex(livre(n=>n>=41));o.push("Faltou número alto (41–60). Inclua um"+(t?", como o "+t:"")+".");}
+  if(a.repet>1){const r=g.filter(n=>L.ultimo.includes(n));o.push("Os números "+r.join(" e ")+" saíram no sorteio passado. Repetir tantos é raro — troque um.");}
+  if(a.nFrias>3)o.push("Vários números que quase não saem. Troque 1 ou 2 por mais comuns.");
+  if(a.nQuent===0)o.push("Nenhum número em alta. Incluir 1 ou 2 dá equilíbrio.");
+  if(a.nAtras===0){const l=L.atrasadas.filter(n=>!g.includes(n)).slice(0,4);o.push("Vale incluir 1 que está há muito sem sair"+(l.length?", como "+l.join(", "):"")+".");}
+  if(a.pop>650){const mp=[...g].sort((x,y)=>POP_MEGA[y]-POP_MEGA[x])[0],t=ex(livre());o.push("Muita gente joga nesses números — trocar o "+mp+" pelo "+t+" reduz a divisão do prêmio.");}
+  return o;
+}
+
+/* ---------------- VALIDADOR LOTOFÁCIL (base 15, volante 5×5) ---------------- */
+const LF_PRIMOS=[2,3,5,7,11,13,17,19,23], LF_MULT3=[3,6,9,12,15,18,21,24], LF_MOLDURA=[1,2,3,4,5,6,10,11,15,16,20,21,22,23,24,25];
+function analyzeLoto(nums,L){
+  const g=[...nums].sort((a,b)=>a-b);
+  const soma=sum(g),pares=g.filter(n=>n%2===0).length;
+  const rr={};g.forEach(n=>{const r=Math.floor((n-1)/5);rr[r]=(rr[r]||0)+1;});const linhas=Math.max(...Object.values(rr));
+  const cc={};g.forEach(n=>{const c=(n-1)%5;cc[c]=(cc[c]||0)+1;});const cols=Math.max(...Object.values(cc));
+  const repet=g.filter(n=>L.ultimo.includes(n)).length;
+  let cons=0;for(let i=0;i<g.length-1;i++)if(g[i+1]===g[i]+1)cons++;
+  const nAtras=g.filter(n=>L.atrasadas.includes(n)).length;
+  const nQuent=g.filter(n=>L.quentes.includes(n)).length, nFrias=g.filter(n=>L.frias.includes(n)).length;
+  const primos=g.filter(n=>LF_PRIMOS.includes(n)).length, mult3=g.filter(n=>LF_MULT3.includes(n)).length;
+  const moldura=g.filter(n=>LF_MOLDURA.includes(n)).length;
+  const pop=Math.round(g.reduce((a,n)=>a+(POP_LOTO[n]||0),0)*10)/10;
+  let s=0;
+  s+=inR(soma,161,220)?15:0;s+=inR(pares,6,9)?15:0;
+  s+=linhas<=4?5:0;s+=cols<=4?5:0;s+=inR(repet,8,10)?10:0;s+=cons<=7?5:0;
+  s+=nAtras>=1?5:0;s+=inR(nQuent,3,7)?5:0;s+=nFrias<=4?5:0;
+  s+=pop<=7900?15:(pop<=8200?7:0);
+  s+=inR(primos,4,7)?5:0;s+=inR(mult3,3,6)?5:0;s+=inR(moldura,7,12)?5:0;
+  const checks=[
+    ["Soma",soma,inR(soma,161,220)],["Pares/ímpares",pares+"/"+(g.length-pares),inR(pares,6,9)],
+    ["Repete sorteio passado",repet,inR(repet,8,10)],["Concorrência",pop,pop<=7900],
+    ["Concentração (linha)",linhas,linhas<=4],["Mesma coluna",cols,cols<=4],
+    ["Sequências",cons,cons<=7],["Há muito sem sair",nAtras,nAtras>=1],
+    ["Em alta",nQuent,inR(nQuent,3,7)],["Saem pouco",nFrias,nFrias<=4],
+    ["Primos",primos,inR(primos,4,7)],["Múltiplos de 3",mult3,inR(mult3,3,6)],
+    ["Bordas do volante",moldura,inR(moldura,7,12)]];
+  return {g,soma,pares,linhas,cols,repet,cons,nAtras,nQuent,nFrias,primos,mult3,moldura,pop,score:s,aval:avalDe(s),checks};
+}
+function suggestLoto(a,L){
+  const o=[],g=a.g;
+  const livre=f=>Object.keys(POP_LOTO).map(Number).filter(n=>!g.includes(n)&&(f?f(n):1)).sort((x,y)=>POP_LOTO[x]-POP_LOTO[y]);
+  const ex=a=>a.length?a[0]:null;
+  if(!inR(a.repet,8,10)){
+    if(a.repet<8){const faltam=L.ultimo.filter(n=>!g.includes(n)).slice(0,5);o.push("Você repetiu só "+a.repet+" números do último sorteio. O normal é 8 a 10 — inclua alguns destes que saíram: "+faltam.join(", ")+".");}
+    else o.push("Você repetiu "+a.repet+" do último sorteio (muito). O normal é 8 a 10 — troque 1 ou 2 por números que não saíram.");
+  }
+  if(a.soma<161)o.push("A soma ficou baixa ("+a.soma+"). O ideal é 161 a 220 — troque um número pequeno por um maior.");
+  if(a.soma>220)o.push("A soma ficou alta ("+a.soma+"). O ideal é 161 a 220 — troque um número grande por um menor.");
+  if(a.pares<6)o.push("Poucos pares ("+a.pares+"). O ideal é 6 a 9 — troque um ímpar por um par.");
+  if(a.pares>9)o.push("Pares demais ("+a.pares+"). O ideal é 6 a 9 — troque um par por um ímpar.");
+  if(a.pop>7900){const mp=[...g].sort((x,y)=>POP_LOTO[y]-POP_LOTO[x])[0],t=ex(livre());o.push("Jogo popular — muita gente joga parecido. Trocar o "+mp+" pelo "+t+" reduz a divisão do prêmio.");}
+  if(a.nFrias>4)o.push("Você tem "+a.nFrias+" números que andam saindo pouco. Deixe no máximo 4 — troque 1 ou 2 por mais comuns.");
+  if(a.nQuent<3){const q=L.quentes.filter(n=>!g.includes(n)).slice(0,4);o.push("Poucos números em alta. Incluir alguns equilibra: "+q.join(", ")+".");}
+  if(a.nQuent>7)o.push("Muitos números em alta ("+a.nQuent+"). Deixe entre 3 e 7.");
+  if(a.nAtras===0){const at=L.atrasadas.filter(n=>!g.includes(n)).slice(0,3);o.push("Vale incluir 1 atrasada"+(at.length?": "+at.join(", "):"")+".");}
+  if(a.cons>7)o.push("Muitos números em sequência ("+a.cons+" pares colados). Quebre algumas sequências.");
+  if(!inR(a.primos,4,7))o.push("Primos fora do ideal ("+a.primos+"). O bom é 4 a 7 (primos: 2,3,5,7,11,13,17,19,23).");
+  if(!inR(a.mult3,3,6))o.push("Múltiplos de 3 fora do ideal ("+a.mult3+"). O bom é 3 a 6 (3,6,9,12,15,18,21,24).");
+  if(!inR(a.moldura,7,12))o.push("Distribuição entre bordas e centro do volante desequilibrada — espalhe melhor pelas 25.");
+  if(a.linhas>4)o.push("Muitos números na mesma linha do volante ("+a.linhas+"). Espalhe entre as 5 linhas.");
+  if(a.cols>4)o.push("Muitos números na mesma coluna do volante ("+a.cols+"). Espalhe entre as 5 colunas.");
+  return o;
+}
+
+/* ====================================================================
+   APP / ESTADO
+   ==================================================================== */
+let session=null, perfil=null;
+let gameId="mega", sel=[], aDate=nextDraw(GAMES.mega.sorteios);
+let view="apostar"; // apostar | admin
+
+async function boot(){
+  if(!cfgOk()){renderNoCfg();return;}
+  const {data:{session:s}}=await sb.auth.getSession();
+  session=s;
+  if(!session){renderAuth();return;}
+  perfil=await loadPerfil();
+  if(!perfil){renderPending(true);return;}
+  if(!perfil.aprovado){renderPending();return;}
+  renderApp();
+}
+async function loadPerfil(){
+  try{const {data,error}=await sb.from("perfis").select("*").eq("id",session.user.id).maybeSingle();if(error)throw error;return data;}catch(e){return null;}
+}
+sb && sb.auth.onAuthStateChange((_e,s)=>{session=s; if(!s){perfil=null;renderAuth();}});
+
+/* ---------- telas de erro/config ---------- */
+function renderNoCfg(){
+  $("#root").innerHTML="";
+  const w=el("div","center");
+  w.appendChild(node(`<div class="panel p20" style="max-width:420px;margin:16px"><h1>Quase lá</h1>
+    <p class="sub">Falta conectar o banco. No arquivo, preencha <b>SUPABASE_ANON</b> (Supabase → Settings → API) e publique de novo.</p></div>`));
+  $("#root").appendChild(w);
+}
+
+/* ---------- AUTH ---------- */
+let authMode="entrar";
+function renderAuth(){
+  setAccent(GAMES.mega);
+  const root=$("#root");root.innerHTML="";
+  const w=el("div","center");
+  const card=el("div","panel p20");card.style.width="100%";card.style.maxWidth="420px";card.style.margin="16px";
+  card.appendChild(node(`<div class="row gap12" style="align-items:baseline"><span class="badge">BOLÃO</span><h1>Mega &amp; Lotofácil</h1></div>
+    <p class="sub">Entre para montar e enviar seus jogos.</p>`));
+  const seg=el("div","seg");seg.style.margin="16px 0";
+  const bE=el("button",null,"Entrar"),bC=el("button",null,"Criar conta");
+  bE.setAttribute("aria-selected",authMode==="entrar");bC.setAttribute("aria-selected",authMode==="cadastrar");
+  bE.onclick=()=>{authMode="entrar";renderAuth();};bC.onclick=()=>{authMode="cadastrar";renderAuth();};
+  seg.append(bE,bC);card.appendChild(seg);
+
+  const form=el("div","stack");
+  if(authMode==="cadastrar")form.appendChild(fld("Nome","nome","text","ex: João Silva"));
+  form.appendChild(fld("E-mail","email","email","voce@email.com"));
+  form.appendChild(fld("Senha","senha","password","mínimo 6 caracteres"));
+  card.appendChild(form);
+
+  const btn=el("button","btn primary full",authMode==="entrar"?"Entrar":"Criar conta");
+  btn.style.marginTop="16px";
+  const msg=el("p","msg");msg.id="authMsg";
+  btn.onclick=()=>authMode==="entrar"?doLogin(msg,btn):doSignup(msg,btn);
+  card.append(btn,msg);
+  // enter submete
+  card.querySelectorAll("input").forEach(i=>i.addEventListener("keydown",e=>{if(e.key==="Enter")btn.click();}));
+  w.appendChild(card);root.appendChild(w);
+}
+function fld(lab,id,type,ph){const l=el("label","fld");l.innerHTML=`<span class="lab">${lab}</span>`;const i=el("input");i.id="f_"+id;i.type=type;i.placeholder=ph||"";if(type==="email")i.autocapitalize="none";l.appendChild(i);return l;}
+async function doLogin(msg,btn){
+  const email=$("#f_email").value.trim(),senha=$("#f_senha").value;
+  if(!email||!senha){msg.className="msg err";msg.textContent="Preencha e-mail e senha.";return;}
+  btn.disabled=true;btn.textContent="Entrando…";msg.textContent="";
+  const {error}=await sb.auth.signInWithPassword({email,password:senha});
+  if(error){btn.disabled=false;btn.textContent="Entrar";msg.className="msg err";msg.textContent=traduzErro(error.message);return;}
+  boot();
+}
+async function doSignup(msg,btn){
+  const nome=$("#f_nome").value.trim(),email=$("#f_email").value.trim(),senha=$("#f_senha").value;
+  if(!nome||!email||!senha){msg.className="msg err";msg.textContent="Preencha todos os campos.";return;}
+  if(senha.length<6){msg.className="msg err";msg.textContent="A senha precisa de ao menos 6 caracteres.";return;}
+  btn.disabled=true;btn.textContent="Criando…";msg.textContent="";
+  const {data,error}=await sb.auth.signUp({email,password:senha,options:{data:{nome}}});
+  if(error){btn.disabled=false;btn.textContent="Criar conta";msg.className="msg err";msg.textContent=traduzErro(error.message);return;}
+  if(!data.session){ // confirmação de e-mail ligada
+    msg.className="msg ok";msg.textContent="Conta criada! Confirme pelo e-mail e depois aguarde a liberação do organizador.";
+    btn.disabled=false;btn.textContent="Criar conta";return;
+  }
+  boot();
+}
+function traduzErro(m){m=(m||"").toLowerCase();
+  if(m.includes("invalid login"))return "E-mail ou senha incorretos.";
+  if(m.includes("already registered"))return "Esse e-mail já tem conta. Tente entrar.";
+  if(m.includes("rate"))return "Muitas tentativas. Espere um pouco.";
+  return "Não deu certo. Tente de novo.";
+}
+
+/* ---------- PENDENTE ---------- */
+function renderPending(semPerfil){
+  setAccent(GAMES.mega);
+  const root=$("#root");root.innerHTML="";
+  const w=el("div","center");
+  const card=el("div","panel p20");card.style.maxWidth="420px";card.style.margin="16px";
+  card.innerHTML=`<h1>Cadastro recebido ✓</h1><p class="sub">${semPerfil?"Sua conta foi criada.":"Falta o organizador liberar seu acesso."} Assim que ele aprovar, é só entrar e começar a apostar.</p>`;
+  const b=el("button","btn full","Sair");b.style.marginTop="16px";b.onclick=async()=>{await sb.auth.signOut();renderAuth();};
+  card.appendChild(b);w.appendChild(card);root.appendChild(w);
+}
+
+/* ---------- APP (logado e aprovado) ---------- */
+function renderApp(){
+  const g=GAMES[gameId];setAccent(g);
+  const root=$("#root");root.innerHTML="";
+  const wrap=el("div","wrap stack");
+  // header
+  const head=el("div");
+  const top=el("div","row between");
+  top.appendChild(node(`<div class="row gap12" style="align-items:baseline"><span class="badge">BOLÃO</span><h1 id="appH1">${g.nome}</h1></div>`));
+  const logout=el("button","link","Sair");logout.onclick=async()=>{await sb.auth.signOut();renderAuth();};
+  top.appendChild(logout);head.appendChild(top);
+  head.appendChild(node(`<p class="sub">Olá, ${escapeHtml((perfil.nome||"").split(" ")[0]||"jogador")}. Monte seu jogo e confirme — cai no painel do organizador.</p>`));
+  // tabs (admin vê Admin)
+  if(perfil.admin){
+    const seg=el("div","seg");seg.style.marginTop="14px";
+    const a=el("button",null,"Apostar"),o=el("button",null,"Painel admin");
+    a.setAttribute("aria-selected",view==="apostar");o.setAttribute("aria-selected",view==="admin");
+    a.onclick=()=>{view="apostar";renderApp();};o.onclick=()=>{view="admin";renderApp();};
+    seg.append(a,o);head.appendChild(seg);
+  }
+  wrap.appendChild(head);
+
+  if(view==="admin"&&perfil.admin){ wrap.appendChild(adminView()); root.appendChild(wrap); return; }
+
+  // seletor de jogo
+  const pick=el("div","seg");pick.style.alignSelf="flex-start";
+  Object.values(GAMES).forEach(gm=>{const b=el("button",null,gm.nome);b.setAttribute("aria-selected",gm.id===gameId);
+    b.onclick=()=>{if(gameId!==gm.id){gameId=gm.id;sel=[];aDate=nextDraw(gm.sorteios);renderApp();}};pick.appendChild(b);});
+  wrap.appendChild(pick);
+
+  // data
+  const dt=el("label","fld");dt.innerHTML=`<span class="lab">Data do sorteio</span>`;
+  const di=el("input");di.type="date";di.min=iso(new Date());di.value=aDate;di.onchange=e=>aDate=e.target.value;
+  dt.appendChild(di);wrap.appendChild(dt);
+  wrap.appendChild(node(`<p class="hint" style="margin-top:-6px">Sugerido: <b>${fmtBR(nextDraw(g.sorteios))}</b>. Você pode marcar de <b>${g.base}</b> a <b>${g.max}</b> dezenas.</p>`));
+
+  // volante
+  const vp=el("div","panel p12");
+  vp.appendChild(node(`<div class="vtop"><span class="ttl">Toque nas dezenas</span><span class="vcount" id="vcount"></span></div>`));
+  const grid=el("div","volante");grid.style.gridTemplateColumns=`repeat(${g.cols},1fr)`;
+  for(let n=1;n<=g.total;n++){const b=el("button","cell",p2(n));b.dataset.n=n;b.onclick=()=>toggle(n);grid.appendChild(b);}
+  vp.appendChild(grid);wrap.appendChild(vp);
+
+  wrap.appendChild(node('<div id="resBox"></div>'));
+  root.appendChild(wrap);
+  syncCells();renderResult();
+}
+function toggle(n){const g=GAMES[gameId];if(sel.includes(n))sel=sel.filter(x=>x!==n);else if(sel.length<g.max)sel=[...sel,n].sort((a,b)=>a-b);else{toast("Máximo de "+g.max+" dezenas");return;}syncCells();renderResult();}
+function syncCells(){const g=GAMES[gameId],full=sel.length>=g.max;
+  document.querySelectorAll(".cell").forEach(c=>{const n=+c.dataset.n,on=sel.includes(n);c.classList.toggle("on",on);c.disabled=!on&&full;});
+  const vc=$("#vcount");if(vc){vc.textContent=sel.length+" / "+g.base+"–"+g.max;vc.style.color=sel.length>=g.base?"var(--accentHi)":"var(--mut)";}}
+
+function renderResult(){
+  const box=$("#resBox");if(!box)return;const g=GAMES[gameId];
+  if(sel.length<g.base){box.innerHTML="";return;}
+  box.innerHTML="";const p=el("div","panel p16");
+  const isBase=sel.length===g.base;
+
+  if(isBase){
+    const a=g.analyze(sel,g.listas),sugs=g.suggest(a,g.listas);
+    const head=el("div","resHead");
+    head.appendChild(node(`<div><p class="eyebrow">Avaliação do jogo</p><p class="aval" style="color:${avalColor(a.aval)}">${a.aval}</p></div>`));
+    head.appendChild(ringEl(a.score));p.appendChild(head);
+    const chips=el("div","chips");
+    a.checks.forEach(([k,v,ok])=>{const c=el("div","chip"+(ok?"":" bad"));
+      c.innerHTML=`<span class="k"><span class="mk" style="color:${ok?'var(--accentHi)':'var(--amber)'}">${ok?'✓':'!'}</span><span class="tx">${k}</span></span><span class="v" style="color:${ok?'var(--text)':'var(--amber)'}">${v}</span>`;chips.appendChild(c);});
+    p.appendChild(chips);
+    if(sugs.length){const sb2=el("div","sugbox");sb2.appendChild(node(`<p class="t">Como deixar o jogo melhor</p>`));
+      sb2.appendChild(node(`<p class="hint" style="margin:5px 0 0">Opcional. Não muda sua chance de ganhar — só deixa o jogo mais variado e, se sair, com menos gente dividindo.</p>`));
+      const ul=el("ul");sugs.forEach(s=>ul.appendChild(el("li",null,escapeHtml(s))));sb2.appendChild(ul);p.appendChild(sb2);}
+    else p.appendChild(el("p","okmsg","Jogo bem equilibrado! Pode confirmar."));
+    p._payload={score:a.score,aval:a.aval};
+  }else{
+    const combos=comb(sel.length,g.base),custo=combos*(PRECO[g.id]||0);
+    const f=el("div","fechado");
+    f.innerHTML=`<p class="lbl">Jogo fechado — ${sel.length} dezenas</p>
+      <p class="big">${combos.toLocaleString("pt-BR")} apostas</p>
+      <p class="hint" style="margin-top:4px">Equivale a ${combos.toLocaleString("pt-BR")} jogos de ${g.base} dezenas. Custo estimado: <b>${brl(custo)}</b> <span style="opacity:.7">(confira o valor atual na Caixa)</span>.</p>
+      <p class="hint" style="margin-top:8px">Dezenas: <b style="font-family:var(--mono)">${sel.map(p2).join(" ")}</b></p>`;
+    p.appendChild(f);
+    p.appendChild(node(`<p class="hint" style="margin-top:10px">O validador completo (nota) roda no jogo simples de ${g.base} dezenas. No fechado, o que vale é o custo acima.</p>`));
+    p._payload={score:null,aval:null};
+  }
+
+  const conf=el("button","btn primary full","Confirmar jogo");conf.style.marginTop="16px";conf.id="btnConf";
+  conf.onclick=()=>confirmar(p._payload);
+  p.appendChild(conf);p.appendChild(node(`<p class="msg" id="confMsg"></p>`));
+  box.appendChild(p);
+}
+async function confirmar(pl){
+  const g=GAMES[gameId],msg=$("#confMsg"),b=$("#btnConf");
+  if(sel.length<g.base)return;
+  b.disabled=true;b.textContent="Enviando…";msg.textContent="";msg.className="msg";
+  try{
+    const {error}=await sb.from("jogos").insert({
+      user_id:session.user.id, nome:perfil.nome, jogo:g.id, data:aDate,
+      dezenas:sel.map(p2).join("-"), qtd:sel.length, score:pl.score, aval:pl.aval });
+    if(error)throw error;
+    b.textContent="✓ Enviado";msg.className="msg ok";msg.textContent="Jogo registrado! Pode fazer outro.";
+    toast("Jogo enviado");
+    setTimeout(()=>{sel=[];syncCells();renderResult();},700);
+  }catch(e){b.disabled=false;b.textContent="Confirmar jogo";msg.className="msg err";msg.textContent="Não consegui enviar. Confira a internet e tente de novo.";}
+}
+
+/* ---------- PAINEL ADMIN ---------- */
+let admFiltroData="", admFiltroJogo="";
+function adminView(){
+  const box=el("div","stack");
+  box.appendChild(node('<div id="pendBox"></div>'));
+  box.appendChild(node('<div id="adminJogos"></div>'));
+  carregarPendentes();carregarJogosAdmin(true);
+  return box;
+}
+async function carregarPendentes(){
+  const c=$("#pendBox");if(!c)return;c.innerHTML=`<div class="panel p16"><p class="hint">Carregando cadastros…</p></div>`;
+  try{
+    const {data,error}=await sb.from("perfis").select("*").eq("aprovado",false).order("criado_em",{ascending:true});
+    if(error)throw error;c.innerHTML="";
+    const card=el("div","panel");
+    card.appendChild(node(`<div class="grpHead"><span class="d">Cadastros pendentes</span><span class="hint" style="font-family:var(--mono)">${data.length}</span></div>`));
+    if(!data.length)card.appendChild(node(`<div class="empty"><p class="big2">Ninguém esperando.</p></div>`));
+    data.forEach(u=>{const r=el("div","pend");
+      r.innerHTML=`<div style="min-width:0"><p class="nm">${escapeHtml(u.nome||"(sem nome)")}</p><p class="em">${escapeHtml(u.email||"")}</p></div>`;
+      const ap=el("button","btn primary sm","Aprovar");
+      ap.onclick=async()=>{ap.disabled=true;ap.textContent="…";try{const {error}=await sb.from("perfis").update({aprovado:true}).eq("id",u.id);if(error)throw error;toast("Aprovado");carregarPendentes();}catch(e){ap.disabled=false;ap.textContent="Aprovar";toast("Falhou");}};
+      r.appendChild(ap);card.appendChild(r);});
+    c.appendChild(card);
+  }catch(e){c.innerHTML=`<div class="panel empty"><p class="big2">Não consegui carregar cadastros</p></div>`;}
+}
+async function carregarJogosAdmin(refill){
+  const c=$("#adminJogos");if(!c)return;c.innerHTML=`<div class="panel p16"><p class="hint">Carregando jogos…</p></div>`;
+  try{
+    let q=sb.from("jogos").select("*").order("data",{ascending:true}).order("id",{ascending:true});
+    if(admFiltroData)q=q.eq("data",admFiltroData);
+    if(admFiltroJogo)q=q.eq("jogo",admFiltroJogo);
+    const {data,error}=await q;if(error)throw error;
+    let datas=[];
+    if(refill){const {data:all}=await sb.from("jogos").select("data");datas=[...new Set((all||[]).map(j=>j.data))].sort();}
+    c.innerHTML="";
+    // filtros
+    const fcard=el("div","panel p12");const fr=el("div","grid2");
+    const sd=el("select");sd.innerHTML=`<option value="">Todas as datas</option>`+ (refill?datas:lastDatas).map(d=>`<option value="${d}">${fmtBR(d)}</option>`).join("");
+    if(refill)lastDatas=datas; sd.value=admFiltroData;sd.onchange=e=>{admFiltroData=e.target.value;carregarJogosAdmin(false);};
+    const sg=el("select");sg.innerHTML=`<option value="">Mega + Lotofácil</option><option value="mega">Só Mega-Sena</option><option value="lotofacil">Só Lotofácil</option>`;
+    sg.value=admFiltroJogo;sg.onchange=e=>{admFiltroJogo=e.target.value;carregarJogosAdmin(false);};
+    fr.append(wrapFld("Data",sd),wrapFld("Jogo",sg));fcard.appendChild(fr);c.appendChild(fcard);
+
+    if(!data.length){c.appendChild(node(`<div class="panel empty" style="margin-top:14px"><p class="big2">Nenhum jogo ${admFiltroData||admFiltroJogo?"com esse filtro":"ainda"}.</p><p class="small">Os jogos confirmados aparecem aqui.</p></div>`));return;}
+    // agrupa por data, depois por jogo
+    const grp={};data.forEach(j=>{(grp[j.data]=grp[j.data]||[]).push(j);});
+    Object.keys(grp).sort().forEach(dt=>{
+      const lista=grp[dt],card=el("div","panel grp");
+      const gh=el("div","grpHead");gh.innerHTML=`<span class="d">${fmtBR(dt)}</span>`;
+      const right=el("div","row gap12");right.style.alignItems="center";
+      right.appendChild(node(`<span class="hint" style="font-family:var(--mono)">${lista.length}</span>`));
+      const cp=el("button","link","Copiar");
+      cp.onclick=()=>copyText("🎰 "+fmtBR(dt)+"\n"+lista.map((j,i)=>(i+1)+") ["+(j.jogo==="mega"?"MEGA":"LOTO")+"] "+j.nome+": "+j.dezenas).join("\n"));
+      right.appendChild(cp);gh.appendChild(right);card.appendChild(gh);
+      lista.forEach(j=>{const r=el("div","jrow");
+        r.innerHTML=`<div style="min-width:0"><p class="nm">${escapeHtml(j.nome||"—")} <span class="tag">${j.jogo==="mega"?"Mega":"Loto"}${j.qtd>(j.jogo==="mega"?6:15)?" "+j.qtd:""}</span></p><p class="dz">${j.dezenas}</p></div>`;
+        const rt=el("div","row gap12");rt.style.alignItems="center";
+        if(j.score!=null)rt.appendChild(node(`<span class="v" style="font-family:var(--mono);color:${scoreColor(j.score)}">${j.score}</span>`));
+        const rm=el("button","rm","remover");rm.onclick=async()=>{try{const {error}=await sb.from("jogos").delete().eq("id",j.id);if(error)throw error;toast("Removido");carregarJogosAdmin(false);}catch(e){toast("Falhou");}};
+        rt.appendChild(rm);r.appendChild(rt);card.appendChild(r);});
+      c.appendChild(card);
+    });
+  }catch(e){c.innerHTML=`<div class="panel empty"><p class="big2">Não consegui carregar os jogos</p></div>`;}
+}
+let lastDatas=[];
+function wrapFld(lab,inputEl){const l=el("label","fld");l.innerHTML=`<span class="lab">${lab}</span>`;l.appendChild(inputEl);return l;}
+
+boot();
+</script>
+</body>
+</html>

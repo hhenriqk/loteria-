@@ -111,15 +111,11 @@
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 
   /* ===== TEMA "DO MILHÃO" — nome dourado + moedas no fundo ===== */
-  .brandWrap{display:flex;flex-direction:column;gap:0;line-height:.9}
-  .brand{font-family:"Anton",var(--sans);font-weight:400;text-transform:uppercase;margin:0;line-height:.92;padding-top:.06em;
-    font-size:clamp(28px,8.4vw,44px);letter-spacing:.012em;
-    background:linear-gradient(176deg,#FFF8DA 0%,#FCE08A 20%,#F4C84A 46%,#DD9A1C 70%,#9C6608 100%);
-    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
-    -webkit-text-stroke:.7px rgba(74,46,4,.45);
-    filter:drop-shadow(0 1.5px 0 rgba(0,0,0,.45)) drop-shadow(0 8px 16px rgba(244,200,74,.20));}
-  .brand .l2{display:block;font-size:1em;letter-spacing:.02em}
-  .brand-sm .brand{font-size:clamp(20px,5.6vw,27px)}
+  .brandWrap{display:flex;flex-direction:column;align-items:center;text-align:center}
+  .brandSvg{display:block;width:min(380px,82vw);height:auto;overflow:visible;
+    filter:drop-shadow(0 2px 0 rgba(0,0,0,.5)) drop-shadow(0 10px 24px rgba(244,200,74,.22));}
+  .brand-sm .brandSvg{width:min(244px,64vw)}
+  .brandWrap .tag{color:var(--gold);font:700 11px var(--mono);letter-spacing:.18em;text-transform:uppercase;margin:11px 0 0;opacity:.92}
   .brandWrap .tag{color:var(--gold);font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;margin:7px 0 0;opacity:.9}
   #coins{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
   .coin{position:absolute;top:-50px;width:var(--sz,26px);height:var(--sz,26px);opacity:0;
@@ -127,9 +123,9 @@
     animation:coinFall var(--dur,15s) linear var(--del,0s) infinite;
     filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
   @keyframes coinFall{0%{transform:translateY(-50px) rotate(0) scaleX(1);opacity:0}
-    7%{opacity:.6} 50%{transform:translateY(46vh) rotate(240deg) scaleX(.65)}
-    93%{opacity:.5} 100%{transform:translateY(105vh) rotate(460deg) scaleX(1);opacity:0}}
-  @media (prefers-reduced-motion: reduce){.coin{animation:none;opacity:.15}}
+    8%{opacity:.42} 50%{transform:translateY(46vh) rotate(240deg) scaleX(.65)}
+    92%{opacity:.34} 100%{transform:translateY(105vh) rotate(460deg) scaleX(1);opacity:0}}
+  @media (prefers-reduced-motion: reduce){.coin{animation:none;opacity:.2}}
 </style>
 </head>
 <body>
@@ -303,14 +299,24 @@ let session=null, perfil=null;
 let gameId="mega", sel=[], aDate=nextDraw(GAMES.mega.sorteios);
 let view="apostar"; // apostar | admin
 
+function brandSvg(){
+  return `<svg class="brandSvg" viewBox="0 0 300 104" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Fora de Forma do Milhão" xmlns="http://www.w3.org/2000/svg">
+  <defs><linearGradient id="fgGold" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="0" stop-color="#FFF8DA"/><stop offset=".22" stop-color="#FCE08A"/><stop offset=".5" stop-color="#F4C84A"/><stop offset=".72" stop-color="#DD9A1C"/><stop offset="1" stop-color="#9C6608"/>
+  </linearGradient></defs>
+  <g font-family="Anton, sans-serif" fill="url(#fgGold)" stroke="rgba(58,33,2,.45)" stroke-width=".6" paint-order="stroke" text-anchor="middle">
+    <text x="150" y="43" textLength="288" lengthAdjust="spacingAndGlyphs" font-size="46">FORA DE FORMA</text>
+    <text x="150" y="95" textLength="288" lengthAdjust="spacingAndGlyphs" font-size="46">DO MILHÃO</text>
+  </g></svg>`;
+}
 function spawnCoins(){
   const wrap=document.getElementById("coins");if(!wrap)return;wrap.innerHTML="";
-  const N=window.matchMedia("(max-width:480px)").matches?10:15;
+  const N=window.matchMedia("(max-width:480px)").matches?16:26;
   for(let i=0;i<N;i++){const c=el("span","coin");
     c.style.left=(Math.random()*100).toFixed(2)+"vw";
-    c.style.setProperty("--sz",(16+Math.floor(Math.random()*22))+"px");
-    c.style.setProperty("--dur",(11+Math.random()*11).toFixed(1)+"s");
-    c.style.setProperty("--del",(-Math.random()*16).toFixed(1)+"s");
+    c.style.setProperty("--sz",(14+Math.floor(Math.random()*22))+"px");
+    c.style.setProperty("--dur",(10+Math.random()*12).toFixed(1)+"s");
+    c.style.setProperty("--del",(-Math.random()*18).toFixed(1)+"s");
     wrap.appendChild(c);}
 }
 
@@ -344,14 +350,15 @@ function renderAuth(){
   const root=$("#root");root.innerHTML="";
   const w=el("div","center");
   const card=el("div","panel p20");card.style.width="100%";card.style.maxWidth="420px";card.style.margin="16px";
-  card.appendChild(node(`<div class="brandWrap"><h1 class="brand">Fora de Forma<span class="l2">do Milhão</span></h1>
+  card.appendChild(node(`<div class="brandWrap">${brandSvg()}
     <p class="tag">★ Bolão Mega-Sena &amp; Lotofácil ★</p></div>
-    <p class="sub" style="margin-top:10px">Cadastre-se e já comece a apostar — junte a tropa e bora pro milhão.</p>`));
-  const seg=el("div","seg");seg.style.margin="16px 0";
+    <p class="sub" style="margin-top:12px;text-align:center">Cadastre-se e já comece a apostar — junte a tropa e bora pro milhão.</p>`));
+  const segWrap=el("div");segWrap.style.cssText="text-align:center;margin:16px 0";
+  const seg=el("div","seg");
   const bE=el("button",null,"Entrar"),bC=el("button",null,"Criar conta");
   bE.setAttribute("aria-selected",authMode==="entrar");bC.setAttribute("aria-selected",authMode==="cadastrar");
   bE.onclick=()=>{authMode="entrar";renderAuth();};bC.onclick=()=>{authMode="cadastrar";renderAuth();};
-  seg.append(bE,bC);card.appendChild(seg);
+  seg.append(bE,bC);segWrap.appendChild(seg);card.appendChild(segWrap);
 
   const form=el("div","stack");
   if(authMode==="cadastrar")form.appendChild(fld("Nome","nome","text","ex: João Silva"));
@@ -406,11 +413,13 @@ function renderApp(){
   const wrap=el("div","wrap stack");
   // header
   const head=el("div");
-  const top=el("div","row between");top.style.alignItems="flex-start";
-  top.appendChild(node(`<div class="brandWrap brand-sm"><h1 class="brand">Fora de Forma<span class="l2">do Milhão</span></h1></div>`));
-  const logout=el("button","link","Sair");logout.onclick=async()=>{await sb.auth.signOut();renderAuth();};
+  head.style.textAlign="center";
+  const top=el("div");top.style.cssText="position:relative";
+  top.appendChild(node(`<div class="brandWrap brand-sm">${brandSvg()}</div>`));
+  const logout=el("button","link","Sair");logout.style.cssText="position:absolute;right:0;top:0";
+  logout.onclick=async()=>{await sb.auth.signOut();renderAuth();};
   top.appendChild(logout);head.appendChild(top);
-  head.appendChild(node(`<p class="sub" style="margin-top:8px">Olá, ${escapeHtml((perfil.nome||"").split(" ")[0]||"jogador")}. Monte seu jogo e confirme — cai no painel do organizador.</p>`));
+  head.appendChild(node(`<p class="sub" style="margin-top:10px;text-align:center">Olá, ${escapeHtml((perfil.nome||"").split(" ")[0]||"jogador")}. Monte seu jogo e confirme — cai no painel do organizador.</p>`));
   // tabs (admin vê Admin)
   if(perfil.admin){
     const seg=el("div","seg");seg.style.marginTop="14px";
@@ -424,10 +433,11 @@ function renderApp(){
   if(view==="admin"&&perfil.admin){ wrap.appendChild(adminView()); root.appendChild(wrap); return; }
 
   // seletor de jogo
-  const pick=el("div","seg");pick.style.alignSelf="flex-start";
+  const pickWrap=el("div");pickWrap.style.textAlign="center";
+  const pick=el("div","seg");
   Object.values(GAMES).forEach(gm=>{const b=el("button",null,gm.nome);b.setAttribute("aria-selected",gm.id===gameId);
     b.onclick=()=>{if(gameId!==gm.id){gameId=gm.id;sel=[];aDate=nextDraw(gm.sorteios);renderApp();}};pick.appendChild(b);});
-  wrap.appendChild(pick);
+  pickWrap.appendChild(pick);wrap.appendChild(pickWrap);
 
   // data
   const dt=el("label","fld");dt.innerHTML=`<span class="lab">Data do sorteio</span>`;
@@ -508,7 +518,8 @@ let admFiltroData="", admFiltroJogo="";
 function adminView(){
   const box=el("div","stack");
   box.appendChild(node('<div id="adminJogos"></div>'));
-  carregarJogosAdmin(true);
+  // roda no próximo tick: só aí o #adminJogos já está anexado ao documento
+  setTimeout(()=>carregarJogosAdmin(true),0);
   return box;
 }
 async function carregarJogosAdmin(refill){

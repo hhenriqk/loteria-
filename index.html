@@ -194,7 +194,7 @@ const avalDe=s=>s>=85?"MESTRE":s>=70?"BOM":s>=55?"FRACO":"RUIM";
 
 /* ---------------- VALIDADOR MEGA-SENA (base 6) ---------------- */
 function analyzeMega(nums,L){
-  const g=[...nums].sort((a,b)=>a-b);
+  const g=[...nums].sort((a,b)=>a-b),qt=g.length,k=qt/6,r=Math.round;
   const soma=sum(g),pares=g.filter(n=>n%2===0).length;
   const t1=g.filter(n=>n<=20).length,t2=g.filter(n=>n>=21&&n<=40).length,t3=g.filter(n=>n>=41).length;
   const fa={};g.forEach(n=>{const f=Math.floor((n-1)/10);fa[f]=(fa[f]||0)+1;});const linhas=Math.max(...Object.values(fa));
@@ -204,42 +204,47 @@ function analyzeMega(nums,L){
   const pop=Math.round(g.reduce((a,n)=>a+(POP_MEGA[n]||0),0)*10)/10;
   const distMed=Math.round(((g[g.length-1]-g[0])/5)*10)/10;
   const ieg=Math.round((popVar(g.map(n=>Math.floor(n/10)))+popVar(g.map(n=>n%10)))*10)/10;
+  // faixas ideais escalam com a qtd de dezenas (qt=6 reproduz exatamente o jogo base)
+  const I={somaMin:r(100*k),somaMax:r(265*k),paresMin:r(qt*0.34),paresMax:r(qt*0.66),
+    tMin:Math.max(1,r(qt*0.167)),tMax:r(qt*0.5),linhasMax:Math.max(3,Math.ceil(qt/2)),colsMax:Math.max(2,Math.ceil(qt/3)),
+    repetMax:Math.max(1,r(qt/6)),quentMin:Math.max(1,r(qt*0.167)),quentMax:r(qt*0.5),friasMax:Math.max(3,r(qt/2)),
+    popGood:r(650*k),popOk:r(850*k)};
   let s=0;
-  s+=inR(soma,100,265)?15:0;s+=inR(pares,2,4)?15:0;
-  s+=inR(t1,1,3)?4:0;s+=inR(t2,1,3)?4:0;s+=inR(t3,1,3)?4:0;
-  s+=linhas<=3?5:0;s+=cols<=2?5:0;s+=repet<=1?8:0;
-  s+=nAtras>=1?5:0;s+=inR(nQuent,1,3)?5:0;s+=nFrias<=3?5:0;
-  s+=pop<=650?15:(pop<=850?7:0);s+=inR(distMed,5,12)?5:0;s+=ieg>=4?5:0;
+  s+=inR(soma,I.somaMin,I.somaMax)?15:0;s+=inR(pares,I.paresMin,I.paresMax)?15:0;
+  s+=inR(t1,I.tMin,I.tMax)?4:0;s+=inR(t2,I.tMin,I.tMax)?4:0;s+=inR(t3,I.tMin,I.tMax)?4:0;
+  s+=linhas<=I.linhasMax?5:0;s+=cols<=I.colsMax?5:0;s+=repet<=I.repetMax?8:0;
+  s+=nAtras>=1?5:0;s+=inR(nQuent,I.quentMin,I.quentMax)?5:0;s+=nFrias<=I.friasMax?5:0;
+  s+=pop<=I.popGood?15:(pop<=I.popOk?7:0);s+=inR(distMed,5,12)?5:0;s+=ieg>=4?5:0;
   const checks=[
-    ["Soma",soma,inR(soma,100,265)],["Pares/ímpares",pares+"/"+(g.length-pares),inR(pares,2,4)],
-    ["Números baixos (1–20)",t1,inR(t1,1,3)],["Números do meio (21–40)",t2,inR(t2,1,3)],["Números altos (41–60)",t3,inR(t3,1,3)],
-    ["Concentração",linhas,linhas<=3],["Mesmo final",cols,cols<=2],["Repete sorteio passado",repet,repet<=1],
-    ["Há muito sem sair",nAtras,nAtras>=1],["Em alta",nQuent,inR(nQuent,1,3)],["Saem pouco",nFrias,nFrias<=3],
-    ["Concorrência",pop,pop<=650],["Distância",distMed,inR(distMed,5,12)],["Equilíbrio",ieg,ieg>=4]];
-  return {g,soma,pares,t1,t2,t3,linhas,cols,repet,nAtras,nQuent,nFrias,pop,distMed,score:s,aval:avalDe(s),checks};
+    ["Soma",soma,inR(soma,I.somaMin,I.somaMax)],["Pares/ímpares",pares+"/"+(qt-pares),inR(pares,I.paresMin,I.paresMax)],
+    ["Números baixos (1–20)",t1,inR(t1,I.tMin,I.tMax)],["Números do meio (21–40)",t2,inR(t2,I.tMin,I.tMax)],["Números altos (41–60)",t3,inR(t3,I.tMin,I.tMax)],
+    ["Concentração",linhas,linhas<=I.linhasMax],["Mesmo final",cols,cols<=I.colsMax],["Repete sorteio passado",repet,repet<=I.repetMax],
+    ["Há muito sem sair",nAtras,nAtras>=1],["Em alta",nQuent,inR(nQuent,I.quentMin,I.quentMax)],["Saem pouco",nFrias,nFrias<=I.friasMax],
+    ["Concorrência",pop,pop<=I.popGood],["Distância",distMed,inR(distMed,5,12)],["Equilíbrio",ieg,ieg>=4]];
+  return {g,qt,soma,pares,t1,t2,t3,linhas,cols,repet,nAtras,nQuent,nFrias,pop,distMed,I,score:s,aval:avalDe(s),checks};
 }
 function suggestMega(a,L){
-  const o=[],g=a.g,odds=g.filter(n=>n%2),evens=g.filter(n=>!(n%2));
+  const o=[],g=a.g,I=a.I,odds=g.filter(n=>n%2),evens=g.filter(n=>!(n%2));
   const livre=f=>Object.keys(POP_MEGA).map(Number).filter(n=>!g.includes(n)&&(f?f(n):1)).sort((x,y)=>POP_MEGA[x]-POP_MEGA[y]);
   const ex=a=>a.length?a[0]:null;
-  if(a.pares<2){const t=ex(livre(n=>!(n%2)));o.push("Quase só números ímpares. Troque um ímpar (ex.: "+odds[odds.length-1]+")"+(t?" por um par como "+t:"")+".");}
-  if(a.pares>4){const t=ex(livre(n=>n%2));o.push("Pares demais. Troque um par (ex.: "+evens[evens.length-1]+")"+(t?" por um ímpar como "+t:"")+".");}
-  if(a.soma<100)o.push("A soma ficou baixa. Troque um número pequeno por um maior.");
-  if(a.soma>265)o.push("A soma ficou alta. Troque um número grande por um menor.");
+  if(a.pares<I.paresMin){const t=ex(livre(n=>!(n%2)));o.push("Poucos pares. Troque um ímpar (ex.: "+odds[odds.length-1]+")"+(t?" por um par como "+t:"")+".");}
+  if(a.pares>I.paresMax){const t=ex(livre(n=>n%2));o.push("Pares demais. Troque um par (ex.: "+evens[evens.length-1]+")"+(t?" por um ímpar como "+t:"")+".");}
+  if(a.soma<I.somaMin)o.push("A soma ficou baixa ("+a.soma+"). O ideal aqui é "+I.somaMin+" a "+I.somaMax+" — troque um número pequeno por um maior.");
+  if(a.soma>I.somaMax)o.push("A soma ficou alta ("+a.soma+"). O ideal aqui é "+I.somaMin+" a "+I.somaMax+" — troque um número grande por um menor.");
   if(a.t1===0){const t=ex(livre(n=>n<=20));o.push("Faltou número baixo (1–20). Inclua um"+(t?", como o "+t:"")+".");}
   if(a.t3===0){const t=ex(livre(n=>n>=41));o.push("Faltou número alto (41–60). Inclua um"+(t?", como o "+t:"")+".");}
-  if(a.repet>1){const r=g.filter(n=>L.ultimo.includes(n));o.push("Os números "+r.join(" e ")+" saíram no sorteio passado. Repetir tantos é raro — troque um.");}
-  if(a.nFrias>3)o.push("Vários números que quase não saem. Troque 1 ou 2 por mais comuns.");
-  if(a.nQuent===0)o.push("Nenhum número em alta. Incluir 1 ou 2 dá equilíbrio.");
+  if(a.repet>I.repetMax){const r=g.filter(n=>L.ultimo.includes(n));o.push("Você repetiu "+a.repet+" do sorteio passado ("+r.join(", ")+"). O ideal é no máximo "+I.repetMax+" — troque algum.");}
+  if(a.nFrias>I.friasMax)o.push("Vários números que quase não saem ("+a.nFrias+"). Deixe no máximo "+I.friasMax+" — troque 1 ou 2 por mais comuns.");
+  if(a.nQuent<I.quentMin)o.push("Poucos números em alta. Incluir 1 ou 2 dá equilíbrio.");
   if(a.nAtras===0){const l=L.atrasadas.filter(n=>!g.includes(n)).slice(0,4);o.push("Vale incluir 1 que está há muito sem sair"+(l.length?", como "+l.join(", "):"")+".");}
-  if(a.pop>650){const mp=[...g].sort((x,y)=>POP_MEGA[y]-POP_MEGA[x])[0],t=ex(livre());o.push("Muita gente joga nesses números — trocar o "+mp+" pelo "+t+" reduz a divisão do prêmio.");}
+  if(a.pop>I.popGood){const mp=[...g].sort((x,y)=>POP_MEGA[y]-POP_MEGA[x])[0],t=ex(livre());o.push("Muita gente joga nesses números — trocar o "+mp+" pelo "+t+" reduz a divisão do prêmio.");}
   return o;
 }
 
 /* ---------------- VALIDADOR LOTOFÁCIL (base 15, volante 5×5) ---------------- */
 const LF_PRIMOS=[2,3,5,7,11,13,17,19,23], LF_MULT3=[3,6,9,12,15,18,21,24], LF_MOLDURA=[1,2,3,4,5,6,10,11,15,16,20,21,22,23,24,25];
 function analyzeLoto(nums,L){
-  const g=[...nums].sort((a,b)=>a-b);
+  const g=[...nums].sort((a,b)=>a-b),qt=g.length,k=qt/15,rd=Math.round;
   const soma=sum(g),pares=g.filter(n=>n%2===0).length;
   const rr={};g.forEach(n=>{const r=Math.floor((n-1)/5);rr[r]=(rr[r]||0)+1;});const linhas=Math.max(...Object.values(rr));
   const cc={};g.forEach(n=>{const c=(n-1)%5;cc[c]=(cc[c]||0)+1;});const cols=Math.max(...Object.values(cc));
@@ -250,45 +255,50 @@ function analyzeLoto(nums,L){
   const primos=g.filter(n=>LF_PRIMOS.includes(n)).length, mult3=g.filter(n=>LF_MULT3.includes(n)).length;
   const moldura=g.filter(n=>LF_MOLDURA.includes(n)).length;
   const pop=Math.round(g.reduce((a,n)=>a+(POP_LOTO[n]||0),0)*10)/10;
+  // faixas ideais escalam com a qtd de dezenas (qt=15 reproduz exatamente o jogo base)
+  const I={somaMin:rd(161*k),somaMax:rd(220*k),paresMin:rd(qt*0.4),paresMax:rd(qt*0.6),
+    linhasMax:Math.max(4,Math.ceil(qt/4)),colsMax:Math.max(4,Math.ceil(qt/4)),repetMin:rd(8*k),repetMax:rd(10*k),
+    consMax:Math.max(7,rd(7*k)),quentMin:rd(3*k),quentMax:rd(7*k),friasMax:rd(4*k),popGood:rd(7900*k),popOk:rd(8200*k),
+    primosMin:rd(4*k),primosMax:rd(7*k),mult3Min:rd(3*k),mult3Max:rd(6*k),molduraMin:rd(7*k),molduraMax:rd(12*k)};
   let s=0;
-  s+=inR(soma,161,220)?15:0;s+=inR(pares,6,9)?15:0;
-  s+=linhas<=4?5:0;s+=cols<=4?5:0;s+=inR(repet,8,10)?10:0;s+=cons<=7?5:0;
-  s+=nAtras>=1?5:0;s+=inR(nQuent,3,7)?5:0;s+=nFrias<=4?5:0;
-  s+=pop<=7900?15:(pop<=8200?7:0);
-  s+=inR(primos,4,7)?5:0;s+=inR(mult3,3,6)?5:0;s+=inR(moldura,7,12)?5:0;
+  s+=inR(soma,I.somaMin,I.somaMax)?15:0;s+=inR(pares,I.paresMin,I.paresMax)?15:0;
+  s+=linhas<=I.linhasMax?5:0;s+=cols<=I.colsMax?5:0;s+=inR(repet,I.repetMin,I.repetMax)?10:0;s+=cons<=I.consMax?5:0;
+  s+=nAtras>=1?5:0;s+=inR(nQuent,I.quentMin,I.quentMax)?5:0;s+=nFrias<=I.friasMax?5:0;
+  s+=pop<=I.popGood?15:(pop<=I.popOk?7:0);
+  s+=inR(primos,I.primosMin,I.primosMax)?5:0;s+=inR(mult3,I.mult3Min,I.mult3Max)?5:0;s+=inR(moldura,I.molduraMin,I.molduraMax)?5:0;
   const checks=[
-    ["Soma",soma,inR(soma,161,220)],["Pares/ímpares",pares+"/"+(g.length-pares),inR(pares,6,9)],
-    ["Repete sorteio passado",repet,inR(repet,8,10)],["Concorrência",pop,pop<=7900],
-    ["Concentração (linha)",linhas,linhas<=4],["Mesma coluna",cols,cols<=4],
-    ["Sequências",cons,cons<=7],["Há muito sem sair",nAtras,nAtras>=1],
-    ["Em alta",nQuent,inR(nQuent,3,7)],["Saem pouco",nFrias,nFrias<=4],
-    ["Primos",primos,inR(primos,4,7)],["Múltiplos de 3",mult3,inR(mult3,3,6)],
-    ["Bordas do volante",moldura,inR(moldura,7,12)]];
-  return {g,soma,pares,linhas,cols,repet,cons,nAtras,nQuent,nFrias,primos,mult3,moldura,pop,score:s,aval:avalDe(s),checks};
+    ["Soma",soma,inR(soma,I.somaMin,I.somaMax)],["Pares/ímpares",pares+"/"+(qt-pares),inR(pares,I.paresMin,I.paresMax)],
+    ["Repete sorteio passado",repet,inR(repet,I.repetMin,I.repetMax)],["Concorrência",pop,pop<=I.popGood],
+    ["Concentração (linha)",linhas,linhas<=I.linhasMax],["Mesma coluna",cols,cols<=I.colsMax],
+    ["Sequências",cons,cons<=I.consMax],["Há muito sem sair",nAtras,nAtras>=1],
+    ["Em alta",nQuent,inR(nQuent,I.quentMin,I.quentMax)],["Saem pouco",nFrias,nFrias<=I.friasMax],
+    ["Primos",primos,inR(primos,I.primosMin,I.primosMax)],["Múltiplos de 3",mult3,inR(mult3,I.mult3Min,I.mult3Max)],
+    ["Bordas do volante",moldura,inR(moldura,I.molduraMin,I.molduraMax)]];
+  return {g,qt,soma,pares,linhas,cols,repet,cons,nAtras,nQuent,nFrias,primos,mult3,moldura,pop,I,score:s,aval:avalDe(s),checks};
 }
 function suggestLoto(a,L){
-  const o=[],g=a.g;
+  const o=[],g=a.g,I=a.I;
   const livre=f=>Object.keys(POP_LOTO).map(Number).filter(n=>!g.includes(n)&&(f?f(n):1)).sort((x,y)=>POP_LOTO[x]-POP_LOTO[y]);
   const ex=a=>a.length?a[0]:null;
-  if(!inR(a.repet,8,10)){
-    if(a.repet<8){const faltam=L.ultimo.filter(n=>!g.includes(n)).slice(0,5);o.push("Você repetiu só "+a.repet+" números do último sorteio. O normal é 8 a 10 — inclua alguns destes que saíram: "+faltam.join(", ")+".");}
-    else o.push("Você repetiu "+a.repet+" do último sorteio (muito). O normal é 8 a 10 — troque 1 ou 2 por números que não saíram.");
+  if(!inR(a.repet,I.repetMin,I.repetMax)){
+    if(a.repet<I.repetMin){const faltam=L.ultimo.filter(n=>!g.includes(n)).slice(0,5);o.push("Você repetiu só "+a.repet+" números do último sorteio. O ideal aqui é "+I.repetMin+" a "+I.repetMax+" — inclua alguns destes que saíram: "+faltam.join(", ")+".");}
+    else o.push("Você repetiu "+a.repet+" do último sorteio (muito). O ideal aqui é "+I.repetMin+" a "+I.repetMax+" — troque 1 ou 2 por números que não saíram.");
   }
-  if(a.soma<161)o.push("A soma ficou baixa ("+a.soma+"). O ideal é 161 a 220 — troque um número pequeno por um maior.");
-  if(a.soma>220)o.push("A soma ficou alta ("+a.soma+"). O ideal é 161 a 220 — troque um número grande por um menor.");
-  if(a.pares<6)o.push("Poucos pares ("+a.pares+"). O ideal é 6 a 9 — troque um ímpar por um par.");
-  if(a.pares>9)o.push("Pares demais ("+a.pares+"). O ideal é 6 a 9 — troque um par por um ímpar.");
-  if(a.pop>7900){const mp=[...g].sort((x,y)=>POP_LOTO[y]-POP_LOTO[x])[0],t=ex(livre());o.push("Jogo popular — muita gente joga parecido. Trocar o "+mp+" pelo "+t+" reduz a divisão do prêmio.");}
-  if(a.nFrias>4)o.push("Você tem "+a.nFrias+" números que andam saindo pouco. Deixe no máximo 4 — troque 1 ou 2 por mais comuns.");
-  if(a.nQuent<3){const q=L.quentes.filter(n=>!g.includes(n)).slice(0,4);o.push("Poucos números em alta. Incluir alguns equilibra: "+q.join(", ")+".");}
-  if(a.nQuent>7)o.push("Muitos números em alta ("+a.nQuent+"). Deixe entre 3 e 7.");
+  if(a.soma<I.somaMin)o.push("A soma ficou baixa ("+a.soma+"). O ideal aqui é "+I.somaMin+" a "+I.somaMax+" — troque um número pequeno por um maior.");
+  if(a.soma>I.somaMax)o.push("A soma ficou alta ("+a.soma+"). O ideal aqui é "+I.somaMin+" a "+I.somaMax+" — troque um número grande por um menor.");
+  if(a.pares<I.paresMin)o.push("Poucos pares ("+a.pares+"). O ideal aqui é "+I.paresMin+" a "+I.paresMax+" — troque um ímpar por um par.");
+  if(a.pares>I.paresMax)o.push("Pares demais ("+a.pares+"). O ideal aqui é "+I.paresMin+" a "+I.paresMax+" — troque um par por um ímpar.");
+  if(a.pop>I.popGood){const mp=[...g].sort((x,y)=>POP_LOTO[y]-POP_LOTO[x])[0],t=ex(livre());o.push("Jogo popular — muita gente joga parecido. Trocar o "+mp+" pelo "+t+" reduz a divisão do prêmio.");}
+  if(a.nFrias>I.friasMax)o.push("Você tem "+a.nFrias+" números que andam saindo pouco. Deixe no máximo "+I.friasMax+" — troque 1 ou 2 por mais comuns.");
+  if(a.nQuent<I.quentMin){const q=L.quentes.filter(n=>!g.includes(n)).slice(0,4);o.push("Poucos números em alta. Incluir alguns equilibra: "+q.join(", ")+".");}
+  if(a.nQuent>I.quentMax)o.push("Muitos números em alta ("+a.nQuent+"). Deixe entre "+I.quentMin+" e "+I.quentMax+".");
   if(a.nAtras===0){const at=L.atrasadas.filter(n=>!g.includes(n)).slice(0,3);o.push("Vale incluir 1 atrasada"+(at.length?": "+at.join(", "):"")+".");}
-  if(a.cons>7)o.push("Muitos números em sequência ("+a.cons+" pares colados). Quebre algumas sequências.");
-  if(!inR(a.primos,4,7))o.push("Primos fora do ideal ("+a.primos+"). O bom é 4 a 7 (primos: 2,3,5,7,11,13,17,19,23).");
-  if(!inR(a.mult3,3,6))o.push("Múltiplos de 3 fora do ideal ("+a.mult3+"). O bom é 3 a 6 (3,6,9,12,15,18,21,24).");
-  if(!inR(a.moldura,7,12))o.push("Distribuição entre bordas e centro do volante desequilibrada — espalhe melhor pelas 25.");
-  if(a.linhas>4)o.push("Muitos números na mesma linha do volante ("+a.linhas+"). Espalhe entre as 5 linhas.");
-  if(a.cols>4)o.push("Muitos números na mesma coluna do volante ("+a.cols+"). Espalhe entre as 5 colunas.");
+  if(a.cons>I.consMax)o.push("Muitos números em sequência ("+a.cons+" pares colados). Quebre algumas sequências.");
+  if(!inR(a.primos,I.primosMin,I.primosMax))o.push("Primos fora do ideal ("+a.primos+"). O bom aqui é "+I.primosMin+" a "+I.primosMax+" (primos: 2,3,5,7,11,13,17,19,23).");
+  if(!inR(a.mult3,I.mult3Min,I.mult3Max))o.push("Múltiplos de 3 fora do ideal ("+a.mult3+"). O bom aqui é "+I.mult3Min+" a "+I.mult3Max+" (3,6,9,12,15,18,21,24).");
+  if(!inR(a.moldura,I.molduraMin,I.molduraMax))o.push("Distribuição entre bordas e centro do volante desequilibrada — espalhe melhor pelas 25.");
+  if(a.linhas>I.linhasMax)o.push("Muitos números na mesma linha do volante ("+a.linhas+"). Espalhe entre as 5 linhas.");
+  if(a.cols>I.colsMax)o.push("Muitos números na mesma coluna do volante ("+a.cols+"). Espalhe entre as 5 colunas.");
   return o;
 }
 
@@ -467,31 +477,32 @@ function renderResult(){
   box.innerHTML="";const p=el("div","panel p16");
   const isBase=sel.length===g.base;
 
-  if(isBase){
-    const a=g.analyze(sel,g.listas),sugs=g.suggest(a,g.listas);
-    const head=el("div","resHead");
-    head.appendChild(node(`<div><p class="eyebrow">Avaliação do jogo</p><p class="aval" style="color:${avalColor(a.aval)}">${a.aval}</p></div>`));
-    head.appendChild(ringEl(a.score));p.appendChild(head);
-    const chips=el("div","chips");
-    a.checks.forEach(([k,v,ok])=>{const c=el("div","chip"+(ok?"":" bad"));
-      c.innerHTML=`<span class="k"><span class="mk" style="color:${ok?'var(--accentHi)':'var(--amber)'}">${ok?'✓':'!'}</span><span class="tx">${k}</span></span><span class="v" style="color:${ok?'var(--text)':'var(--amber)'}">${v}</span>`;chips.appendChild(c);});
-    p.appendChild(chips);
-    if(sugs.length){const sb2=el("div","sugbox");sb2.appendChild(node(`<p class="t">Como deixar o jogo melhor</p>`));
-      sb2.appendChild(node(`<p class="hint" style="margin:5px 0 0">Opcional. Não muda sua chance de ganhar — só deixa o jogo mais variado e, se sair, com menos gente dividindo.</p>`));
-      const ul=el("ul");sugs.forEach(s=>ul.appendChild(el("li",null,escapeHtml(s))));sb2.appendChild(ul);p.appendChild(sb2);}
-    else p.appendChild(el("p","okmsg","Jogo bem equilibrado! Pode confirmar."));
-    p._payload={score:a.score,aval:a.aval};
-  }else{
+  // jogo fechado (mais que a base): custo no topo
+  if(!isBase){
     const combos=comb(sel.length,g.base),custo=combos*(PRECO[g.id]||0);
-    const f=el("div","fechado");
+    const f=el("div","fechado");f.style.marginTop="0";
     f.innerHTML=`<p class="lbl">Jogo fechado — ${sel.length} dezenas</p>
       <p class="big">${combos.toLocaleString("pt-BR")} apostas</p>
       <p class="hint" style="margin-top:4px">Equivale a ${combos.toLocaleString("pt-BR")} jogos de ${g.base} dezenas. Custo estimado: <b>${brl(custo)}</b> <span style="opacity:.7">(confira o valor atual na Caixa)</span>.</p>
       <p class="hint" style="margin-top:8px">Dezenas: <b style="font-family:var(--mono)">${sel.map(p2).join(" ")}</b></p>`;
     p.appendChild(f);
-    p.appendChild(node(`<p class="hint" style="margin-top:10px">O validador completo (nota) roda no jogo simples de ${g.base} dezenas. No fechado, o que vale é o custo acima.</p>`));
-    p._payload={score:null,aval:null};
+    p.appendChild(node(`<div style="height:1px;background:var(--line);margin:16px 0"></div>`));
   }
+
+  // validador — roda em QUALQUER quantidade (faixas ideais ajustam à qtd de dezenas)
+  const a=g.analyze(sel,g.listas),sugs=g.suggest(a,g.listas);
+  const head=el("div","resHead");
+  head.appendChild(node(`<div><p class="eyebrow">Avaliação do jogo${isBase?"":" — "+sel.length+" dezenas"}</p><p class="aval" style="color:${avalColor(a.aval)}">${a.aval}</p></div>`));
+  head.appendChild(ringEl(a.score));p.appendChild(head);
+  const chips=el("div","chips");
+  a.checks.forEach(([k,v,ok])=>{const c=el("div","chip"+(ok?"":" bad"));
+    c.innerHTML=`<span class="k"><span class="mk" style="color:${ok?'var(--accentHi)':'var(--amber)'}">${ok?'✓':'!'}</span><span class="tx">${k}</span></span><span class="v" style="color:${ok?'var(--text)':'var(--amber)'}">${v}</span>`;chips.appendChild(c);});
+  p.appendChild(chips);
+  if(sugs.length){const sb2=el("div","sugbox");sb2.appendChild(node(`<p class="t">Como deixar o jogo melhor</p>`));
+    sb2.appendChild(node(`<p class="hint" style="margin:5px 0 0">Opcional. Não muda sua chance de ganhar — só deixa o jogo mais variado e, se sair, com menos gente dividindo.</p>`));
+    const ul=el("ul");sugs.forEach(s=>ul.appendChild(el("li",null,escapeHtml(s))));sb2.appendChild(ul);p.appendChild(sb2);}
+  else p.appendChild(el("p","okmsg","Jogo bem equilibrado! Pode confirmar."));
+  p._payload={score:a.score,aval:a.aval};
 
   const conf=el("button","btn primary full","Confirmar jogo");conf.style.marginTop="16px";conf.id="btnConf";
   conf.onclick=()=>confirmar(p._payload);

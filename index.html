@@ -3,11 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, viewport-fit=cover" />
-<title>Bolão — Mega-Sena & Lotofácil</title>
+<title>Fora de Forma do Milhão — Bolão Mega-Sena & Lotofácil</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#0A1410; --panel:#10201A; --card:#13241D; --inp:#0C1712;
-    --line:#1F362C; --text:#E9F1EC; --mut:#7E9488; --mutHi:#A6BCB0;
+    --bg:#0A1326; --panel:#121B30; --card:#16213A; --inp:#0E1626;
+    --line:#26324C; --text:#EAF0FB; --mut:#8A97B0; --mutHi:#B6C2D9;
+    --gold:#F4C84A; --gold2:#E8A21C; --goldHi:#FFF3B0; --goldInk:#3A2702;
     --amber:#F2A93B; --red:#E76A82;
     --accent:#00A85A; --accentHi:#43E08A; --accentInk:#04130C;     /* trocado por jogo */
     --mono:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
@@ -15,12 +19,16 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;overscroll-behavior:none;overflow-x:hidden}
-  body{background:radial-gradient(900px 360px at 50% -140px, color-mix(in srgb,var(--accent) 16%, transparent), transparent 70%),var(--bg);
+  body{background:
+      radial-gradient(1100px 440px at 50% -170px, rgba(244,200,74,.16), transparent 70%),
+      radial-gradient(720px 320px at 50% -120px, color-mix(in srgb,var(--accent) 13%, transparent), transparent 72%),
+      var(--bg);
     color:var(--text);font-family:var(--sans);-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;min-height:100vh}
+  #root{position:relative;z-index:1}
   .wrap{max-width:560px;margin:0 auto;padding:20px 16px 48px}
   .center{min-height:100vh;display:flex;align-items:center;justify-content:center}
 
-  .badge{background:var(--accent);color:var(--accentInk);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.16em;padding:4px 8px;border-radius:6px}
+  .badge{background:linear-gradient(180deg,var(--goldHi),var(--gold2));color:var(--goldInk);font-family:var(--mono);font-size:11px;font-weight:800;letter-spacing:.16em;padding:4px 8px;border-radius:6px;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 2px 8px rgba(244,200,74,.25)}
   h1{font-size:24px;font-weight:800;letter-spacing:-.02em;margin:0}
   .sub{color:var(--mut);font-size:13px;margin:6px 0 0;line-height:1.4}
   .row{display:flex;align-items:center}.gap8{gap:8px}.gap12{gap:12px}.between{justify-content:space-between}
@@ -101,9 +109,31 @@
   #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
   .stack>*+*{margin-top:16px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+
+  /* ===== TEMA "DO MILHÃO" — nome dourado + moedas no fundo ===== */
+  .brandWrap{display:flex;flex-direction:column;gap:0;line-height:.9}
+  .brand{font-family:"Anton",var(--sans);font-weight:400;text-transform:uppercase;margin:0;line-height:.92;padding-top:.06em;
+    font-size:clamp(28px,8.4vw,44px);letter-spacing:.012em;
+    background:linear-gradient(176deg,#FFF8DA 0%,#FCE08A 20%,#F4C84A 46%,#DD9A1C 70%,#9C6608 100%);
+    -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;
+    -webkit-text-stroke:.7px rgba(74,46,4,.45);
+    filter:drop-shadow(0 1.5px 0 rgba(0,0,0,.45)) drop-shadow(0 8px 16px rgba(244,200,74,.20));}
+  .brand .l2{display:block;font-size:1em;letter-spacing:.02em}
+  .brand-sm .brand{font-size:clamp(20px,5.6vw,27px)}
+  .brandWrap .tag{color:var(--gold);font:700 11px var(--mono);letter-spacing:.16em;text-transform:uppercase;margin:7px 0 0;opacity:.9}
+  #coins{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none}
+  .coin{position:absolute;top:-50px;width:var(--sz,26px);height:var(--sz,26px);opacity:0;
+    background:center/contain no-repeat url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><defs><radialGradient id='c' cx='37%25' cy='30%25' r='78%25'><stop offset='0' stop-color='%23FFF6C0'/><stop offset='52%25' stop-color='%23F4C84A'/><stop offset='100%25' stop-color='%23A86E08'/></radialGradient></defs><circle cx='20' cy='20' r='18' fill='url(%23c)' stroke='%237a4f05' stroke-width='1.4'/><circle cx='20' cy='20' r='13' fill='none' stroke='%23FFF6C0' stroke-width='1' opacity='.45'/><text x='20' y='26.5' text-anchor='middle' font-family='Georgia,serif' font-weight='700' font-size='15' fill='%237a4f05'>R%24</text></svg>");
+    animation:coinFall var(--dur,15s) linear var(--del,0s) infinite;
+    filter:drop-shadow(0 4px 6px rgba(0,0,0,.45))}
+  @keyframes coinFall{0%{transform:translateY(-50px) rotate(0) scaleX(1);opacity:0}
+    7%{opacity:.6} 50%{transform:translateY(46vh) rotate(240deg) scaleX(.65)}
+    93%{opacity:.5} 100%{transform:translateY(105vh) rotate(460deg) scaleX(1);opacity:0}}
+  @media (prefers-reduced-motion: reduce){.coin{animation:none;opacity:.15}}
 </style>
 </head>
 <body>
+  <div id="coins" aria-hidden="true"></div>
   <div id="root"></div>
   <div id="toast"></div>
 
@@ -273,14 +303,24 @@ let session=null, perfil=null;
 let gameId="mega", sel=[], aDate=nextDraw(GAMES.mega.sorteios);
 let view="apostar"; // apostar | admin
 
+function spawnCoins(){
+  const wrap=document.getElementById("coins");if(!wrap)return;wrap.innerHTML="";
+  const N=window.matchMedia("(max-width:480px)").matches?10:15;
+  for(let i=0;i<N;i++){const c=el("span","coin");
+    c.style.left=(Math.random()*100).toFixed(2)+"vw";
+    c.style.setProperty("--sz",(16+Math.floor(Math.random()*22))+"px");
+    c.style.setProperty("--dur",(11+Math.random()*11).toFixed(1)+"s");
+    c.style.setProperty("--del",(-Math.random()*16).toFixed(1)+"s");
+    wrap.appendChild(c);}
+}
+
 async function boot(){
   if(!cfgOk()){renderNoCfg();return;}
   const {data:{session:s}}=await sb.auth.getSession();
   session=s;
   if(!session){renderAuth();return;}
-  perfil=await loadPerfil();
-  if(!perfil){renderPending(true);return;}
-  if(!perfil.aprovado){renderPending();return;}
+  // sem aprovação: cadastrou/entrou, já usa. (fallback se o perfil ainda não foi criado pelo trigger)
+  perfil=await loadPerfil() || {nome:(s.user&&s.user.user_metadata&&s.user.user_metadata.nome)||"", email:(s.user&&s.user.email)||"", admin:false};
   renderApp();
 }
 async function loadPerfil(){
@@ -304,8 +344,9 @@ function renderAuth(){
   const root=$("#root");root.innerHTML="";
   const w=el("div","center");
   const card=el("div","panel p20");card.style.width="100%";card.style.maxWidth="420px";card.style.margin="16px";
-  card.appendChild(node(`<div class="row gap12" style="align-items:baseline"><span class="badge">BOLÃO</span><h1>Mega &amp; Lotofácil</h1></div>
-    <p class="sub">Entre para montar e enviar seus jogos.</p>`));
+  card.appendChild(node(`<div class="brandWrap"><h1 class="brand">Fora de Forma<span class="l2">do Milhão</span></h1>
+    <p class="tag">★ Bolão Mega-Sena &amp; Lotofácil ★</p></div>
+    <p class="sub" style="margin-top:10px">Cadastre-se e já comece a apostar — junte a tropa e bora pro milhão.</p>`));
   const seg=el("div","seg");seg.style.margin="16px 0";
   const bE=el("button",null,"Entrar"),bC=el("button",null,"Criar conta");
   bE.setAttribute("aria-selected",authMode==="entrar");bC.setAttribute("aria-selected",authMode==="cadastrar");
@@ -343,8 +384,8 @@ async function doSignup(msg,btn){
   btn.disabled=true;btn.textContent="Criando…";msg.textContent="";
   const {data,error}=await sb.auth.signUp({email,password:senha,options:{data:{nome}}});
   if(error){btn.disabled=false;btn.textContent="Criar conta";msg.className="msg err";msg.textContent=traduzErro(error.message);return;}
-  if(!data.session){ // confirmação de e-mail ligada
-    msg.className="msg ok";msg.textContent="Conta criada! Confirme pelo e-mail e depois aguarde a liberação do organizador.";
+  if(!data.session){ // confirmação de e-mail ligada no Supabase
+    msg.className="msg ok";msg.textContent="Conta criada! Confirme pelo e-mail e já pode entrar e apostar.";
     btn.disabled=false;btn.textContent="Criar conta";return;
   }
   boot();
@@ -356,29 +397,20 @@ function traduzErro(m){m=(m||"").toLowerCase();
   return "Não deu certo. Tente de novo.";
 }
 
-/* ---------- PENDENTE ---------- */
-function renderPending(semPerfil){
-  setAccent(GAMES.mega);
-  const root=$("#root");root.innerHTML="";
-  const w=el("div","center");
-  const card=el("div","panel p20");card.style.maxWidth="420px";card.style.margin="16px";
-  card.innerHTML=`<h1>Cadastro recebido ✓</h1><p class="sub">${semPerfil?"Sua conta foi criada.":"Falta o organizador liberar seu acesso."} Assim que ele aprovar, é só entrar e começar a apostar.</p>`;
-  const b=el("button","btn full","Sair");b.style.marginTop="16px";b.onclick=async()=>{await sb.auth.signOut();renderAuth();};
-  card.appendChild(b);w.appendChild(card);root.appendChild(w);
-}
+/* ---------- (fluxo de aprovação removido — cadastrou, já usa) ---------- */
 
-/* ---------- APP (logado e aprovado) ---------- */
+/* ---------- APP (logado) ---------- */
 function renderApp(){
   const g=GAMES[gameId];setAccent(g);
   const root=$("#root");root.innerHTML="";
   const wrap=el("div","wrap stack");
   // header
   const head=el("div");
-  const top=el("div","row between");
-  top.appendChild(node(`<div class="row gap12" style="align-items:baseline"><span class="badge">BOLÃO</span><h1 id="appH1">${g.nome}</h1></div>`));
+  const top=el("div","row between");top.style.alignItems="flex-start";
+  top.appendChild(node(`<div class="brandWrap brand-sm"><h1 class="brand">Fora de Forma<span class="l2">do Milhão</span></h1></div>`));
   const logout=el("button","link","Sair");logout.onclick=async()=>{await sb.auth.signOut();renderAuth();};
   top.appendChild(logout);head.appendChild(top);
-  head.appendChild(node(`<p class="sub">Olá, ${escapeHtml((perfil.nome||"").split(" ")[0]||"jogador")}. Monte seu jogo e confirme — cai no painel do organizador.</p>`));
+  head.appendChild(node(`<p class="sub" style="margin-top:8px">Olá, ${escapeHtml((perfil.nome||"").split(" ")[0]||"jogador")}. Monte seu jogo e confirme — cai no painel do organizador.</p>`));
   // tabs (admin vê Admin)
   if(perfil.admin){
     const seg=el("div","seg");seg.style.marginTop="14px";
@@ -475,26 +507,9 @@ async function confirmar(pl){
 let admFiltroData="", admFiltroJogo="";
 function adminView(){
   const box=el("div","stack");
-  box.appendChild(node('<div id="pendBox"></div>'));
   box.appendChild(node('<div id="adminJogos"></div>'));
-  carregarPendentes();carregarJogosAdmin(true);
+  carregarJogosAdmin(true);
   return box;
-}
-async function carregarPendentes(){
-  const c=$("#pendBox");if(!c)return;c.innerHTML=`<div class="panel p16"><p class="hint">Carregando cadastros…</p></div>`;
-  try{
-    const {data,error}=await sb.from("perfis").select("*").eq("aprovado",false).order("criado_em",{ascending:true});
-    if(error)throw error;c.innerHTML="";
-    const card=el("div","panel");
-    card.appendChild(node(`<div class="grpHead"><span class="d">Cadastros pendentes</span><span class="hint" style="font-family:var(--mono)">${data.length}</span></div>`));
-    if(!data.length)card.appendChild(node(`<div class="empty"><p class="big2">Ninguém esperando.</p></div>`));
-    data.forEach(u=>{const r=el("div","pend");
-      r.innerHTML=`<div style="min-width:0"><p class="nm">${escapeHtml(u.nome||"(sem nome)")}</p><p class="em">${escapeHtml(u.email||"")}</p></div>`;
-      const ap=el("button","btn primary sm","Aprovar");
-      ap.onclick=async()=>{ap.disabled=true;ap.textContent="…";try{const {error}=await sb.from("perfis").update({aprovado:true}).eq("id",u.id);if(error)throw error;toast("Aprovado");carregarPendentes();}catch(e){ap.disabled=false;ap.textContent="Aprovar";toast("Falhou");}};
-      r.appendChild(ap);card.appendChild(r);});
-    c.appendChild(card);
-  }catch(e){c.innerHTML=`<div class="panel empty"><p class="big2">Não consegui carregar cadastros</p></div>`;}
 }
 async function carregarJogosAdmin(refill){
   const c=$("#adminJogos");if(!c)return;c.innerHTML=`<div class="panel p16"><p class="hint">Carregando jogos…</p></div>`;
@@ -538,6 +553,7 @@ async function carregarJogosAdmin(refill){
 let lastDatas=[];
 function wrapFld(lab,inputEl){const l=el("label","fld");l.innerHTML=`<span class="lab">${lab}</span>`;l.appendChild(inputEl);return l;}
 
+spawnCoins();
 boot();
 </script>
 </body>

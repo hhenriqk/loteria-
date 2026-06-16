@@ -130,6 +130,8 @@
     8%{opacity:.42} 50%{transform:translateY(46vh) rotate(240deg) scaleX(.65)}
     92%{opacity:.34} 100%{transform:translateY(105vh) rotate(460deg) scaleX(1);opacity:0}}
   @media (prefers-reduced-motion: reduce){.coin{animation:none;opacity:.2}}
+  .jrow .conf{font-size:12px;line-height:1.5;word-break:break-word;margin-top:5px}
+  .jrow .conf:empty{display:none;margin:0}
 </style>
 </head>
 <body>
@@ -467,8 +469,10 @@ function renderApp(){
   vp.appendChild(grid);wrap.appendChild(vp);
 
   wrap.appendChild(node('<div id="resBox"></div>'));
+  wrap.appendChild(node('<div id="meusJogos" style="margin-top:6px"></div>'));
   root.appendChild(wrap);
   syncCells();renderResult();
+  setTimeout(carregarMeusJogos,0);
 }
 function toggle(n){const g=GAMES[gameId];if(sel.includes(n))sel=sel.filter(x=>x!==n);else if(sel.length<g.max)sel=[...sel,n].sort((a,b)=>a-b);else{toast("Máximo de "+g.max+" dezenas");return;}syncCells();renderResult();}
 function syncCells(){const g=GAMES[gameId],full=sel.length>=g.max;
@@ -518,14 +522,82 @@ async function confirmar(pl){
   if(sel.length<g.base)return;
   b.disabled=true;b.textContent="Enviando…";msg.textContent="";msg.className="msg";
   try{
+    const {data:rod}=await sb.from("rodadas").select("fechado").eq("jogo",g.id).eq("data",aDate).maybeSingle();
+    if(rod&&rod.fechado){b.disabled=false;b.textContent="Confirmar jogo";msg.className="msg err";msg.textContent="As apostas de "+fmtBR(aDate)+" foram encerradas pelo organizador.";return;}
     const {error}=await sb.from("jogos").insert({
       user_id:session.user.id, nome:perfil.nome, jogo:g.id, data:aDate,
       dezenas:sel.map(p2).join("-"), qtd:sel.length, score:pl.score, aval:pl.aval });
     if(error)throw error;
     b.textContent="✓ Enviado";msg.className="msg ok";msg.textContent="Jogo registrado! Pode fazer outro.";
     toast("Jogo enviado");
-    setTimeout(()=>{sel=[];syncCells();renderResult();},700);
-  }catch(e){b.disabled=false;b.textContent="Confirmar jogo";msg.className="msg err";msg.textContent="Não consegui enviar. Confira a internet e tente de novo.";}
+    setTimeout(()=>{sel=[];syncCells();renderResult();carregarMeusJogos();},700);
+  }catch(e){b.disabled=false;b.textContent="Confirmar jogo";msg.className="msg err";msg.textContent="Não consegui enviar. Pode ser que as apostas tenham sido encerradas, ou a internet falhou.";}
+}
+
+/* ---------- MEUS JOGOS + CONFERÊNCIA (resultado oficial da Caixa) ---------- */
+const CAIXA_SLUG={mega:"megasena",lotofacil:"lotofacil"};
+function brToISO(s){if(!s)return"";const[d,m,y]=s.split("/");return y+"-"+m+"-"+d;}
+async function caixaGet(jogo,concurso){
+  const base="https://servicebus2.caixa.gov.br/portaldeloterias/api/"+CAIXA_SLUG[jogo];
+  const r=await fetch(concurso?base+"/"+concurso:base);if(!r.ok)throw new Error("http "+r.status);
+  const d=await r.json();
+  return {dezenas:(d.listaDezenas||[]).map(x=>(""+x).padStart(2,"0")),data:brToISO(d.dataApuracao),concurso:d.numero};
+}
+async function resultadoOficial(jogo,dataISO){
+  const latest=await caixaGet(jogo);
+  if(dataISO>latest.data)return {futuro:true};
+  if(dataISO===latest.data)return latest;
+  // data passada: estima o concurso e corrige até bater a data (máx 6 buscas)
+  const perWeek=jogo==="mega"?3:6;
+  const daysBack=Math.max(0,Math.round((new Date(latest.data+"T12:00:00")-new Date(dataISO+"T12:00:00"))/86400000));
+  let guess=latest.concurso-Math.round(daysBack*perWeek/7);
+  for(let i=0;i<6&&guess>0;i++){
+    let res;try{res=await caixaGet(jogo,guess);}catch(e){return null;}
+    if(res.data===dataISO)return res;
+    guess+=res.data<dataISO?1:-1;
+  }
+  return null;
+}
+function premioTier(jogo,k){
+  if(jogo==="mega")return k>=6?"SENA":k===5?"Quina":k===4?"Quadra":null;
+  return k>=15?"15 acertos":k>=11?k+" acertos (premiado)":null;
+}
+async function conferir(j,outEl,btn){
+  btn.disabled=true;const t0=btn.textContent;btn.textContent="…";
+  outEl.style.color="var(--mut)";outEl.textContent="Buscando resultado oficial…";
+  try{
+    const res=await resultadoOficial(j.jogo,j.data);
+    if(!res){outEl.style.color="var(--amber)";outEl.textContent="Não achei o resultado dessa data. Confira no site da Caixa.";btn.disabled=false;btn.textContent=t0;return;}
+    if(res.futuro){outEl.style.color="var(--mut)";outEl.textContent="O sorteio de "+fmtBR(j.data)+" ainda não foi realizado.";btn.disabled=false;btn.textContent=t0;return;}
+    const sorteadas=res.dezenas.map(Number),meus=j.dezenas.split("-").map(Number);
+    const acertos=meus.filter(n=>sorteadas.includes(n)),k=acertos.length,premio=premioTier(j.jogo,k);
+    outEl.style.color=premio?"var(--accentHi)":"var(--mutHi)";
+    outEl.innerHTML=`<b>${k} acerto${k===1?"":"s"}</b>${premio?` — <b>${premio}</b> 🎉`:""} · sorteio ${fmtBR(j.data)}: <span style="font-family:var(--mono)">${res.dezenas.join(" ")}</span>${acertos.length?` · você acertou <b style="color:var(--accentHi);font-family:var(--mono)">${acertos.map(p2).join(" ")}</b>`:""}`;
+    btn.textContent="✓ Conferido";btn.disabled=false;
+  }catch(e){outEl.style.color="var(--red)";outEl.textContent="Não consegui conferir agora (conexão/Caixa). Tente de novo.";btn.disabled=false;btn.textContent=t0;}
+}
+async function carregarMeusJogos(){
+  const c=$("#meusJogos");if(!c)return;
+  c.innerHTML=`<div class="panel p16"><p class="hint">Carregando seus jogos…</p></div>`;
+  try{
+    const {data:jogos,error}=await sb.from("jogos").select("*").eq("user_id",session.user.id).order("data",{ascending:false}).order("id",{ascending:false});
+    if(error)throw error;
+    c.innerHTML="";
+    if(!jogos.length){c.appendChild(node(`<div class="panel empty"><p class="big2">Você ainda não fez nenhum jogo.</p><p class="small">Monte um acima e confirme — ele aparece aqui.</p></div>`));return;}
+    const card=el("div","panel grp");
+    card.appendChild(node(`<div class="grpHead"><span class="d">Meus jogos</span><span class="hint" style="font-family:var(--mono)">${jogos.length}</span></div>`));
+    const hoje=iso(new Date());
+    jogos.forEach(j=>{
+      const r=el("div","jrow"),gName=j.jogo==="mega"?"Mega":"Loto";
+      const extra=j.qtd>(j.jogo==="mega"?6:15)?" "+j.qtd:"";
+      const badge=j.apostado?`<span class="tag" style="border-color:var(--accent);color:var(--accentHi)">✓ apostado</span>`:`<span class="tag">aguardando</span>`;
+      r.innerHTML=`<div style="min-width:0"><p class="nm">${fmtBR(j.data)} <span class="tag">${gName}${extra}</span> ${badge}</p><p class="dz">${j.dezenas}</p><p class="conf"></p></div>`;
+      const rt=el("div");rt.style.flex="none";
+      if(j.data<=hoje){const cf=el("button","btn sm","Conferir");cf.onclick=()=>conferir(j,r.querySelector(".conf"),cf);rt.appendChild(cf);}
+      r.appendChild(rt);card.appendChild(r);
+    });
+    c.appendChild(card);
+  }catch(e){c.innerHTML=`<div class="panel empty"><p class="big2">Não consegui carregar seus jogos</p></div>`;}
 }
 
 /* ---------- PAINEL ADMIN ---------- */
@@ -544,6 +616,9 @@ async function carregarJogosAdmin(refill){
     if(admFiltroData)q=q.eq("data",admFiltroData);
     if(admFiltroJogo)q=q.eq("jogo",admFiltroJogo);
     const {data,error}=await q;if(error)throw error;
+    // rodadas fechadas (encerrar apostas)
+    let fechSet=new Set();
+    try{const {data:rodd}=await sb.from("rodadas").select("jogo,data,fechado");(rodd||[]).forEach(rr=>{if(rr.fechado)fechSet.add(rr.jogo+"|"+rr.data);});}catch(e){}
     let datas=[];
     if(refill){const {data:all}=await sb.from("jogos").select("data");datas=[...new Set((all||[]).map(j=>j.data))].sort();}
     c.innerHTML="";
@@ -560,16 +635,26 @@ async function carregarJogosAdmin(refill){
     const grp={};data.forEach(j=>{(grp[j.data]=grp[j.data]||[]).push(j);});
     Object.keys(grp).sort().forEach(dt=>{
       const lista=grp[dt],card=el("div","panel grp");
-      const gh=el("div","grpHead");gh.innerHTML=`<span class="d">${fmtBR(dt)}</span>`;
+      const jogosNoDia=[...new Set(lista.map(j=>j.jogo))];
+      const allClosed=jogosNoDia.every(jg=>fechSet.has(jg+"|"+dt));
+      const gh=el("div","grpHead");
+      gh.innerHTML=`<span class="d">${fmtBR(dt)}${allClosed?` <span class="tag" style="border-color:var(--amber);color:var(--amber)">🔒 encerrado</span>`:""}</span>`;
       const right=el("div","row gap12");right.style.alignItems="center";
       right.appendChild(node(`<span class="hint" style="font-family:var(--mono)">${lista.length}</span>`));
       const cp=el("button","link","Copiar");
       cp.onclick=()=>copyText("🎰 "+fmtBR(dt)+"\n"+lista.map((j,i)=>(i+1)+") ["+(j.jogo==="mega"?"MEGA":"LOTO")+"] "+j.nome+": "+j.dezenas).join("\n"));
-      right.appendChild(cp);gh.appendChild(right);card.appendChild(gh);
+      right.appendChild(cp);
+      const fb=el("button","link",allClosed?"Reabrir":"Encerrar apostas");
+      fb.onclick=async()=>{fb.disabled=true;try{const novo=!allClosed;const rows=jogosNoDia.map(jg=>({jogo:jg,data:dt,fechado:novo}));const {error}=await sb.from("rodadas").upsert(rows,{onConflict:"jogo,data"});if(error)throw error;toast(novo?"Apostas encerradas":"Apostas reabertas");carregarJogosAdmin(false);}catch(e){fb.disabled=false;toast("Falhou");}};
+      right.appendChild(fb);gh.appendChild(right);card.appendChild(gh);
       lista.forEach(j=>{const r=el("div","jrow");
         r.innerHTML=`<div style="min-width:0"><p class="nm">${escapeHtml(j.nome||"—")} <span class="tag">${j.jogo==="mega"?"Mega":"Loto"}${j.qtd>(j.jogo==="mega"?6:15)?" "+j.qtd:""}</span></p><p class="dz">${j.dezenas}</p></div>`;
         const rt=el("div","row gap12");rt.style.alignItems="center";
         if(j.score!=null)rt.appendChild(node(`<span class="v" style="font-family:var(--mono);color:${scoreColor(j.score)}">${j.score}</span>`));
+        const ap=el("button","btn sm",j.apostado?"✓ apostado":"marcar");
+        if(j.apostado)ap.style.cssText="border-color:var(--accent);color:var(--accentHi)";
+        ap.onclick=async()=>{ap.disabled=true;try{const {error}=await sb.from("jogos").update({apostado:!j.apostado}).eq("id",j.id);if(error)throw error;j.apostado=!j.apostado;ap.textContent=j.apostado?"✓ apostado":"marcar";ap.style.cssText=j.apostado?"border-color:var(--accent);color:var(--accentHi)":"";ap.disabled=false;toast(j.apostado?"Marcado como apostado":"Desmarcado");}catch(e){ap.disabled=false;toast("Falhou");}};
+        rt.appendChild(ap);
         const rm=el("button","rm","remover");rm.onclick=async()=>{try{const {error}=await sb.from("jogos").delete().eq("id",j.id);if(error)throw error;toast("Removido");carregarJogosAdmin(false);}catch(e){toast("Falhou");}};
         rt.appendChild(rm);r.appendChild(rt);card.appendChild(r);});
       c.appendChild(card);

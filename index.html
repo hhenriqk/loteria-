@@ -651,9 +651,9 @@ async function carregarJogosAdmin(refill){
         r.innerHTML=`<div style="min-width:0"><p class="nm">${escapeHtml(j.nome||"—")} <span class="tag">${j.jogo==="mega"?"Mega":"Loto"}${j.qtd>(j.jogo==="mega"?6:15)?" "+j.qtd:""}</span></p><p class="dz">${j.dezenas}</p></div>`;
         const rt=el("div","row gap12");rt.style.alignItems="center";
         if(j.score!=null)rt.appendChild(node(`<span class="v" style="font-family:var(--mono);color:${scoreColor(j.score)}">${j.score}</span>`));
-        const ap=el("button","btn sm",j.apostado?"✓ apostado":"marcar");
+        const ap=el("button","btn sm",j.apostado?"✓ Apostado":"☐ Apostado");
         if(j.apostado)ap.style.cssText="border-color:var(--accent);color:var(--accentHi)";
-        ap.onclick=async()=>{ap.disabled=true;try{const {error}=await sb.from("jogos").update({apostado:!j.apostado}).eq("id",j.id);if(error)throw error;j.apostado=!j.apostado;ap.textContent=j.apostado?"✓ apostado":"marcar";ap.style.cssText=j.apostado?"border-color:var(--accent);color:var(--accentHi)":"";ap.disabled=false;toast(j.apostado?"Marcado como apostado":"Desmarcado");}catch(e){ap.disabled=false;toast("Falhou");}};
+        ap.onclick=async()=>{ap.disabled=true;try{const {error}=await sb.from("jogos").update({apostado:!j.apostado}).eq("id",j.id);if(error)throw error;j.apostado=!j.apostado;ap.textContent=j.apostado?"✓ Apostado":"☐ Apostado";ap.style.cssText=j.apostado?"border-color:var(--accent);color:var(--accentHi)":"";ap.disabled=false;toast(j.apostado?"Marcado como apostado":"Desmarcado");}catch(e){ap.disabled=false;toast("Falhou");}};
         rt.appendChild(ap);
         const rm=el("button","rm","remover");rm.onclick=async()=>{try{const {error}=await sb.from("jogos").delete().eq("id",j.id);if(error)throw error;toast("Removido");carregarJogosAdmin(false);}catch(e){toast("Falhou");}};
         rt.appendChild(rm);r.appendChild(rt);card.appendChild(r);});

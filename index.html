@@ -436,17 +436,18 @@ function renderApp(){
   logout.onclick=async()=>{await sb.auth.signOut();renderAuth();};
   top.appendChild(logout);head.appendChild(top);
   head.appendChild(node(`<p class="sub" style="margin-top:10px;text-align:center">Olá, ${escapeHtml((perfil.nome||"").split(" ")[0]||"jogador")}. Monte seu jogo e confirme — cai no painel do organizador.</p>`));
-  // tabs (admin vê Admin)
-  if(perfil.admin){
+  // tabs: todos veem Apostar/Bolão; admin também vê Admin
+  {
     const seg=el("div","seg");seg.style.marginTop="14px";
-    const a=el("button",null,"Apostar"),o=el("button",null,"Painel admin");
-    a.setAttribute("aria-selected",view==="apostar");o.setAttribute("aria-selected",view==="admin");
-    a.onclick=()=>{view="apostar";renderApp();};o.onclick=()=>{view="admin";renderApp();};
-    seg.append(a,o);head.appendChild(seg);
+    const tabs=[["apostar","Apostar"],["bolao","Bolão"]];
+    if(perfil.admin)tabs.push(["admin","Admin"]);
+    tabs.forEach(([v,label])=>{const b=el("button",null,label);b.setAttribute("aria-selected",view===v);b.onclick=()=>{view=v;renderApp();};seg.appendChild(b);});
+    head.appendChild(seg);
   }
   wrap.appendChild(head);
 
   if(view==="admin"&&perfil.admin){ wrap.appendChild(adminView()); root.appendChild(wrap); return; }
+  if(view==="bolao"){ wrap.appendChild(bolaoView()); root.appendChild(wrap); return; }
 
   // seletor de jogo
   const pickWrap=el("div");pickWrap.style.textAlign="center";
@@ -562,19 +563,27 @@ function premioTier(jogo,k){
   if(jogo==="mega")return k>=6?"SENA":k===5?"Quina":k===4?"Quadra":null;
   return k>=15?"15 acertos":k>=11?k+" acertos (premiado)":null;
 }
+function renderConfResult(j,res,outEl){
+  if(!res){outEl.style.color="var(--amber)";outEl.textContent="Não achei o resultado dessa data. Confira no site da Caixa.";return false;}
+  if(res.futuro){outEl.style.color="var(--mut)";outEl.textContent="O sorteio de "+fmtBR(j.data)+" ainda não foi realizado.";return false;}
+  const sorteadas=res.dezenas.map(Number),meus=j.dezenas.split("-").map(Number);
+  const acertos=meus.filter(n=>sorteadas.includes(n)),k=acertos.length,premio=premioTier(j.jogo,k);
+  outEl.style.color=premio?"var(--accentHi)":"var(--mutHi)";
+  outEl.innerHTML=`<b>${k} acerto${k===1?"":"s"}</b>${premio?` — <b>${premio}</b> 🎉`:""} · resultado: <span style="font-family:var(--mono)">${res.dezenas.join(" ")}</span>${acertos.length?` · acertou <b style="color:var(--accentHi);font-family:var(--mono)">${acertos.map(p2).join(" ")}</b>`:""}`;
+  return true;
+}
 async function conferir(j,outEl,btn){
   btn.disabled=true;const t0=btn.textContent;btn.textContent="…";
   outEl.style.color="var(--mut)";outEl.textContent="Buscando resultado oficial…";
-  try{
-    const res=await resultadoOficial(j.jogo,j.data);
-    if(!res){outEl.style.color="var(--amber)";outEl.textContent="Não achei o resultado dessa data. Confira no site da Caixa.";btn.disabled=false;btn.textContent=t0;return;}
-    if(res.futuro){outEl.style.color="var(--mut)";outEl.textContent="O sorteio de "+fmtBR(j.data)+" ainda não foi realizado.";btn.disabled=false;btn.textContent=t0;return;}
-    const sorteadas=res.dezenas.map(Number),meus=j.dezenas.split("-").map(Number);
-    const acertos=meus.filter(n=>sorteadas.includes(n)),k=acertos.length,premio=premioTier(j.jogo,k);
-    outEl.style.color=premio?"var(--accentHi)":"var(--mutHi)";
-    outEl.innerHTML=`<b>${k} acerto${k===1?"":"s"}</b>${premio?` — <b>${premio}</b> 🎉`:""} · sorteio ${fmtBR(j.data)}: <span style="font-family:var(--mono)">${res.dezenas.join(" ")}</span>${acertos.length?` · você acertou <b style="color:var(--accentHi);font-family:var(--mono)">${acertos.map(p2).join(" ")}</b>`:""}`;
-    btn.textContent="✓ Conferido";btn.disabled=false;
-  }catch(e){outEl.style.color="var(--red)";outEl.textContent="Não consegui conferir agora (conexão/Caixa). Tente de novo.";btn.disabled=false;btn.textContent=t0;}
+  try{const res=await resultadoOficial(j.jogo,j.data);const ok=renderConfResult(j,res,outEl);btn.textContent=ok?"✓ Conferido":t0;btn.disabled=false;}
+  catch(e){outEl.style.color="var(--red)";outEl.textContent="Não consegui conferir agora (conexão/Caixa). Tente de novo.";btn.disabled=false;btn.textContent=t0;}
+}
+async function conferirTodos(lista,btn){
+  btn.disabled=true;const t0=btn.textContent;btn.textContent="Conferindo…";
+  const distintos=[...new Set(lista.map(j=>j.jogo))],resByJogo={};
+  for(const jg of distintos){const ex=lista.find(j=>j.jogo===jg);try{resByJogo[jg]=await resultadoOficial(jg,ex.data);}catch(e){resByJogo[jg]=null;}}
+  lista.forEach(j=>{const out=document.getElementById("conf-"+j.id);if(out)renderConfResult(j,resByJogo[j.jogo],out);});
+  btn.textContent="✓ Conferido";btn.disabled=false;
 }
 async function carregarMeusJogos(){
   const c=$("#meusJogos");if(!c)return;
@@ -598,6 +607,36 @@ async function carregarMeusJogos(){
     });
     c.appendChild(card);
   }catch(e){c.innerHTML=`<div class="panel empty"><p class="big2">Não consegui carregar seus jogos</p></div>`;}
+}
+
+/* ---------- BOLÃO (mural: jogos apostados, visível a todos) ---------- */
+function bolaoView(){const box=el("div","stack");box.appendChild(node('<div id="bolaoBox"></div>'));setTimeout(carregarBolao,0);return box;}
+async function carregarBolao(){
+  const c=$("#bolaoBox");if(!c)return;
+  c.innerHTML=`<div class="panel p16"><p class="hint">Carregando jogos do bolão…</p></div>`;
+  try{
+    const {data,error}=await sb.from("jogos").select("*").eq("apostado",true).order("data",{ascending:false}).order("id",{ascending:true});
+    if(error)throw error;
+    c.innerHTML="";
+    c.appendChild(node(`<p class="hint" style="text-align:center;margin:2px 0 4px">Jogos apostados pelo organizador — de todos do bolão. Toque em <b>Conferir resultado</b> pra ver os acertos do dia.</p>`));
+    if(!data.length){c.appendChild(node(`<div class="panel empty"><p class="big2">Nenhum jogo apostado ainda.</p><p class="small">Quando o organizador marcar os jogos como apostados, eles aparecem aqui pra todo mundo.</p></div>`));return;}
+    const hoje=iso(new Date());
+    const grp={};data.forEach(j=>{(grp[j.data]=grp[j.data]||[]).push(j);});
+    Object.keys(grp).sort().reverse().forEach(dt=>{
+      const lista=grp[dt],card=el("div","panel grp");
+      const gh=el("div","grpHead");gh.innerHTML=`<span class="d">${fmtBR(dt)}</span>`;
+      const right=el("div","row gap12");right.style.alignItems="center";
+      right.appendChild(node(`<span class="hint" style="font-family:var(--mono)">${lista.length} jogo${lista.length>1?"s":""}</span>`));
+      if(dt<=hoje){const cf=el("button","btn sm","Conferir resultado");cf.onclick=()=>conferirTodos(lista,cf);right.appendChild(cf);}
+      gh.appendChild(right);card.appendChild(gh);
+      lista.forEach(j=>{const r=el("div","jrow"),gName=j.jogo==="mega"?"Mega":"Loto";
+        const extra=j.qtd>(j.jogo==="mega"?6:15)?" "+j.qtd:"";
+        const mine=j.user_id===session.user.id;
+        r.innerHTML=`<div style="min-width:0"><p class="nm">${escapeHtml(j.nome||"—")} <span class="tag">${gName}${extra}</span>${mine?` <span class="tag" style="border-color:var(--accent);color:var(--accentHi)">você</span>`:""}</p><p class="dz">${j.dezenas}</p><p class="conf" id="conf-${j.id}"></p></div>`;
+        card.appendChild(r);});
+      c.appendChild(card);
+    });
+  }catch(e){c.innerHTML=`<div class="panel empty"><p class="big2">Não consegui carregar os jogos do bolão</p></div>`;}
 }
 
 /* ---------- PAINEL ADMIN ---------- */
